@@ -1,6 +1,6 @@
 # Hackathon log
 
-- **Project:** CollabAgent
+- **Project:** Parley
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Autonomous creator collaboration CRM automating research via Firecrawl, negotiations via OpenAI, and programmatic inboxes via AgentMail with real-time Convex subscriptions.
 - **Live app:** not deployed

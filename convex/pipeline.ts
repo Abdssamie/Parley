@@ -46,8 +46,8 @@ We are currently launching "${campaign.title}" and would love to partner with yo
 Our allocated budget for this deliverable is up to $${campaign.budgetCap.toLocaleString()} USD. Could you let us know your current rates and availability for next month?
 
 Best regards,
-CollabAgent Partner Intelligence
-collab-agent@agentmail.to`;
+Parley Partner Intelligence
+parley@agentmail.to`;
 
     // 5. Dispatch Email via AgentMail
     const mailResult = await sendAgentMail({
@@ -69,7 +69,7 @@ collab-agent@agentmail.to`;
     await ctx.runMutation(api.messages.addMessage, {
       threadId,
       sender: "agent",
-      senderAddress: "collab-agent@agentmail.to",
+      senderAddress: "parley@agentmail.to",
       extractedIntent: "initial_outreach_pitch",
       subject: pitchSubject,
       rawBody: pitchBody,
@@ -136,7 +136,7 @@ export const processInboundReply = action({
       await ctx.runMutation(api.messages.addMessage, {
         threadId: thread._id,
         sender: "agent",
-        senderAddress: "collab-agent@agentmail.to",
+        senderAddress: "parley@agentmail.to",
         extractedIntent: analysis.extractedIntent,
         subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
         rawBody: analysis.draftReply,
@@ -260,7 +260,7 @@ export const seedDemoData = mutation({
     await ctx.db.insert("messages", {
       threadId: marcusThreadId,
       sender: "agent",
-      senderAddress: "collab-agent@agentmail.to",
+      senderAddress: "parley@agentmail.to",
       timestamp: now - 3600000 * 8,
       extractedIntent: "initial_outreach_pitch",
       subject: "Partnership Collaboration: Q4 AI Productivity Suite Launch",
@@ -283,7 +283,7 @@ export const seedDemoData = mutation({
     await ctx.db.insert("messages", {
       threadId: alexThreadId,
       sender: "agent",
-      senderAddress: "collab-agent@agentmail.to",
+      senderAddress: "parley@agentmail.to",
       timestamp: now - 86400000,
       extractedIntent: "initial_outreach_pitch",
       subject: "Partnership Collaboration: Q4 AI Productivity Suite Launch",
@@ -296,7 +296,7 @@ export const seedDemoData = mutation({
       timestamp: now - 3600000 * 2,
       extractedIntent: "rate_counter_exceeds_budget",
       subject: "Re: Partnership Collaboration: Q4 AI Productivity Suite Launch",
-      rawBody: "Hey CollabAgent team! Our standard rate for a dedicated deep dive episode plus social distribution is $2,500. Let me know if that works within your Q4 budget.",
+      rawBody: "Hey Parley team! Our standard rate for a dedicated deep dive episode plus social distribution is $2,500. Let me know if that works within your Q4 budget.",
     });
 
     // Accepted
@@ -314,7 +314,7 @@ export const seedDemoData = mutation({
     await ctx.db.insert("messages", {
       threadId: elenaThreadId,
       sender: "agent",
-      senderAddress: "collab-agent@agentmail.to",
+      senderAddress: "parley@agentmail.to",
       timestamp: now - 86400000 * 2,
       extractedIntent: "initial_outreach_pitch",
       subject: "Partnership Collaboration: Q4 AI Productivity Suite Launch",
@@ -332,7 +332,7 @@ export const seedDemoData = mutation({
     await ctx.db.insert("messages", {
       threadId: elenaThreadId,
       sender: "agent",
-      senderAddress: "collab-agent@agentmail.to",
+      senderAddress: "parley@agentmail.to",
       timestamp: now - 3600000 * 12,
       extractedIntent: "agreement_confirmed",
       subject: "Re: Partnership Collaboration: Q4 AI Productivity Suite Launch",

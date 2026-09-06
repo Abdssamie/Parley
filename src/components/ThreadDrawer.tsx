@@ -257,7 +257,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                             </div>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                               {isAgent
-                                ? 'CollabAgent Bot'
+                                ? 'Parley Bot'
                                 : isHuman
                                 ? 'Human Reviewer'
                                 : creator?.name ?? 'Creator'}
@@ -307,7 +307,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                     disabled={isSubmitting}
                     onClick={() =>
                       handleSimulate(
-                        `Hi CollabAgent! Thanks for the pitch. For 1 dedicated YouTube video and promotion, our quote is $2,750. Let me know if this works.`
+                        `Hi Parley team! Thanks for the pitch. For 1 dedicated YouTube video and promotion, our quote is $2,750. Let me know if this works.`
                       )
                     }
                     className="h-auto py-2 text-left flex flex-col items-start border-amber-300 bg-white hover:bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-300"

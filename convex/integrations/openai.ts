@@ -22,7 +22,7 @@ export async function analyzeAndDraftNegotiation(params: {
 
   if (apiKey) {
     try {
-      const prompt = `You are CollabAgent, an autonomous sponsorship negotiator representing a marketing team.
+      const prompt = `You are Parley, an autonomous sponsorship negotiator representing a marketing team.
 Campaign: "${params.campaignTitle}"
 Deliverable Requirements: "${params.deliverableRequirements}"
 Maximum Budget Cap: $${params.budgetCap} USD
@@ -95,7 +95,7 @@ Respond ONLY with valid JSON in this structure:
       withinBudget: true,
       needsApproval: false,
       recommendedStage: "declined",
-      draftReply: `Hi ${params.creatorName}, completely understand. Thanks for letting us know, and we'll keep you in mind for future campaigns! Best, CollabAgent Team.`,
+      draftReply: `Hi ${params.creatorName}, completely understand. Thanks for letting us know, and we'll keep you in mind for future campaigns! Best, Parley Team.`,
       reasoning: "Creator declined the sponsorship opportunity.",
     };
   }

@@ -18,7 +18,7 @@ export async function sendAgentMail(
   params: AgentMailSendParams
 ): Promise<AgentMailSendResult> {
   const apiKey = process.env.AGENTMAIL_API_KEY;
-  const agentInbox = process.env.AGENTMAIL_INBOX_ID || "inbox_collab_agent_01";
+  const agentInbox = process.env.AGENTMAIL_INBOX_ID || "inbox_parley_01";
 
   if (apiKey) {
     try {

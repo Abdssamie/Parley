@@ -32,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                  Collab<span className="text-indigo-600 dark:text-indigo-400">Agent</span>
+                  Par<span className="text-indigo-600 dark:text-indigo-400">ley</span>
                 </span>
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
