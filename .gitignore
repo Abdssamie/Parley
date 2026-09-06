@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Local env files
+.env.local
+.env.*.local
+
+# Editor & OS
+.DS_Store
+*.log
