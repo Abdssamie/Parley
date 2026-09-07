@@ -12,9 +12,16 @@
 - **Auth:** none
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T15:41:16Z
+- **Last updated:** 2026-09-07T16:12:00Z
 
 ## Log
+
+### 2026-09-07 - Refine Data Tables, Checkboxes & Scrollbar Theme
+Refined CRM data table UX and dark theme integration:
+- Compressed and streamlined table headers and toolbars across Campaigns (`src/components/crm/campaigns/CampaignsView.tsx`) and Creators (`src/components/crm/creators/CreatorsView.tsx`), replacing multi-row tabs with compact single-row search, select dropdowns, and icon actions.
+- Restored official shadcn Table primitive baseline (`src/components/ui/table.tsx`).
+- Installed and integrated official shadcn Checkbox component (`src/components/ui/checkbox.tsx`) adhering to the Claymorphism dark palette (`bg-primary text-primary-foreground` on select).
+- Fixed cross-browser dark scrollbar rendering by setting `color-scheme: dark;` on `html`, `body`, and `.dark`, and establishing standard 12px dark track and thumb scrollbar styles in `src/index.css`.
 
 ### 2026-09-07 - fa19d9b
 Overhauled dashboard UI to production shadcn standards with a Claymorphism theme and Poppins typography:

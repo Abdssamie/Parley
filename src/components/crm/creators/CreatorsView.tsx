@@ -16,12 +16,12 @@ import {
 import { CreatorDrawer } from './CreatorDrawer'
 import { NewCreatorModal } from './NewCreatorModal'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface CreatorsViewProps {
   onLaunchOutreach?: (creator: Doc<'creators'>) => void
@@ -179,16 +180,16 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
   }
 
   // Selection handlers
-  const handleToggleSelectAll = () => {
-    if (selectedIds.size === filteredCreators.length && filteredCreators.length > 0) {
-      setSelectedIds(new Set())
-    } else {
+  const handleToggleSelectAll = (checked?: boolean | 'indeterminate') => {
+    if (checked === true || (checked === undefined && selectedIds.size < filteredCreators.length)) {
       setSelectedIds(new Set(filteredCreators.map((c) => c._id)))
+    } else {
+      setSelectedIds(new Set())
     }
   }
 
-  const handleToggleSelectRow = (id: Id<'creators'>, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleToggleSelectRow = (id: Id<'creators'>, e?: React.MouseEvent | React.SyntheticEvent) => {
+    if (e) e.stopPropagation()
     const next = new Set(selectedIds)
     if (next.has(id)) {
       next.delete(id)
@@ -225,79 +226,76 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
 
   return (
     <div className="space-y-4">
-      {/* Pure Data Table Card (Cards removed as requested) */}
-      <Card className="shadow-xs border-border/80">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border/60">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg font-bold">Creators Data Table</CardTitle>
-              <Badge variant="secondary" className="text-xs font-mono">
-                {filteredCreators.length} row{filteredCreators.length === 1 ? '' : 's'}
-              </Badge>
-            </div>
-            <CardDescription className="text-xs mt-0.5">
-              Click any cell to edit inline. Press Enter or click outside to save.
-            </CardDescription>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-56">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+      {/* Table Container */}
+      <div className="rounded-xl border border-border/80 bg-card text-card-foreground shadow-xs overflow-hidden">
+        {/* Compressed Single-Row Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2 border-b border-border/60 bg-muted/20">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search creators..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9 text-xs"
+                className="pl-8 h-8 text-xs bg-background/80"
               />
             </div>
 
-            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5 text-xs">
-              {(['all', 'youtube', 'twitter', 'tiktok', 'instagram'] as const).map((plat) => (
-                <button
-                  key={plat}
-                  type="button"
-                  onClick={() => setFilterPlatform(plat)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                    filterPlatform === plat
-                      ? 'bg-background text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {plat}
-                </button>
-              ))}
-            </div>
+            <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+              <SelectTrigger size="sm" className="h-8 text-xs w-[125px] bg-background/80">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="twitter">Twitter / X</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="twitch">Twitch</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5 text-xs">
-              {(['all', 'collected', 'negotiating', 'contracted'] as const).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setFilterStatus(st)}
-                  className={`rounded-md px-2 py-1 text-xs font-medium capitalize transition-colors ${
-                    filterStatus === st
-                      ? 'bg-background text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {st.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger size="sm" className="h-8 text-xs w-[125px] bg-background/80">
+                <SelectValue placeholder="Stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stages</SelectItem>
+                <SelectItem value="collected">Identified</SelectItem>
+                <SelectItem value="outreached">Outreached</SelectItem>
+                <SelectItem value="negotiating">Negotiating</SelectItem>
+                <SelectItem value="contracted">Contracted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBatchDelete}
+                className="h-8 text-xs gap-1.5 px-2.5 shadow-xs"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Delete ({selectedIds.size})</span>
+              </Button>
+            )}
 
             <Button
-              size="sm"
+              size="icon"
               onClick={() => setIsNewModalOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium shadow-xs"
+              className="size-8 shadow-xs"
+              title="Add Creator"
+              aria-label="Add Creator"
             >
-              <Plus className="size-3.5" />
-              <span>Add Creator</span>
+              <Plus className="size-4" />
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {filteredCreators.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
               <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3">
@@ -319,71 +317,57 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-10 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedIds.size > 0 && selectedIds.size === filteredCreators.length
-                        }
-                        onChange={handleToggleSelectAll}
-                        aria-label="Select all creators"
-                        className="rounded border-input text-primary focus:ring-primary size-3.5 cursor-pointer"
-                      />
-                    </TableHead>
-                    <TableHead className="min-w-[220px] text-xs font-semibold">
-                      Creator Name & Niche <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[120px] text-xs font-semibold">
-                      Platform <span className="text-[10px] text-muted-foreground font-normal">(Select)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[130px] text-xs font-semibold">
-                      Status <span className="text-[10px] text-muted-foreground font-normal">(Select)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[110px] text-xs font-semibold">
-                      Followers <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[110px] text-xs font-semibold">
-                      Avg. Views <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[110px] text-xs font-semibold">
-                      Est. Cost <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[80px] text-xs font-semibold">Brand Fit</TableHead>
-                    <TableHead className="w-28 text-right px-4 text-xs font-semibold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCreators.map((creator) => {
-                    const isSelected = selectedIds.has(creator._id)
-                    const initials = creator.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .substring(0, 2)
-                      .toUpperCase()
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10 px-4 text-center">
+                    <Checkbox
+                      checked={
+                        selectedIds.size === 0
+                          ? false
+                          : selectedIds.size === filteredCreators.length
+                          ? true
+                          : 'indeterminate'
+                      }
+                      onCheckedChange={handleToggleSelectAll}
+                      aria-label="Select all creators"
+                    />
+                  </TableHead>
+                  <TableHead className="min-w-[200px] text-xs font-semibold">Creator & Niche</TableHead>
+                  <TableHead className="min-w-[110px] text-xs font-semibold">Platform</TableHead>
+                  <TableHead className="min-w-[110px] text-xs font-semibold">Status</TableHead>
+                  <TableHead className="min-w-[95px] text-xs font-semibold">Followers</TableHead>
+                  <TableHead className="min-w-[95px] text-xs font-semibold">Avg. Views</TableHead>
+                  <TableHead className="min-w-[95px] text-xs font-semibold">Est. Cost</TableHead>
+                  <TableHead className="min-w-[80px] text-xs font-semibold">Brand Fit</TableHead>
+                  <TableHead className="w-24 text-right px-4 text-xs font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCreators.map((creator) => {
+                  const isSelected = selectedIds.has(creator._id)
+                  const initials = creator.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase()
 
-                    return (
-                      <TableRow
-                        key={creator._id}
-                        className={`transition-colors group/row ${
-                          isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'
-                        }`}
-                      >
+                  return (
+                    <TableRow
+                      key={creator._id}
+                      data-state={isSelected ? "selected" : undefined}
+                      className="group/row"
+                    >
                         {/* Checkbox */}
                         <TableCell
                           onClick={(e) => handleToggleSelectRow(creator._id, e)}
-                          className="px-4 text-center"
+                          className="px-4 text-center cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={isSelected}
-                            onChange={() => {}}
+                            onCheckedChange={() => handleToggleSelectRow(creator._id)}
                             aria-label={`Select ${creator.name}`}
-                            className="rounded border-input text-primary focus:ring-primary size-3.5 cursor-pointer"
                           />
                         </TableCell>
 
@@ -670,10 +654,9 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
                   })}
                 </TableBody>
               </Table>
-            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Floating Batch Action Bar */}
       {selectedIds.size > 0 && (

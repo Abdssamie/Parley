@@ -6,6 +6,10 @@
 @layer base {
   * {
     border-color: var(--border);
+    scrollbar-color: var(--border) var(--card);
+  }
+  html {
+    color-scheme: dark;
   }
   body {
     margin: 0;
@@ -14,6 +18,35 @@
     color: var(--foreground);
     letter-spacing: var(--tracking-normal);
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Standard-dimension dark scrollbar matching theme */
+  ::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-track {
+    background: var(--card);
+  }
+
+  ::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+    border: 2px solid var(--card);
+  }
+
+  ::-webkit-scrollbar-thumb:hover,
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  ::-webkit-scrollbar-corner,
+  *::-webkit-scrollbar-corner {
+    background: var(--card);
   }
 }
 
@@ -143,6 +176,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.2244 0.0074 67.4370);
   --foreground: oklch(0.9288 0.0126 255.5078);
   --card: oklch(0.2801 0.0080 59.3379);

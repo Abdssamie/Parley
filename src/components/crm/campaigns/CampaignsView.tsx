@@ -16,12 +16,12 @@ import {
 } from 'lucide-react'
 import { NewCampaignModal } from './NewCampaignModal'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -33,6 +33,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface CampaignsViewProps {
   onSelectCampaign?: (campaign: Doc<'campaigns'>) => void
@@ -147,16 +148,16 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
   }
 
   // Selection handlers
-  const handleToggleSelectAll = () => {
-    if (selectedIds.size === filteredCampaigns.length && filteredCampaigns.length > 0) {
-      setSelectedIds(new Set())
-    } else {
+  const handleToggleSelectAll = (checked?: boolean | 'indeterminate') => {
+    if (checked === true || (checked === undefined && selectedIds.size < filteredCampaigns.length)) {
       setSelectedIds(new Set(filteredCampaigns.map((c) => c._id)))
+    } else {
+      setSelectedIds(new Set())
     }
   }
 
-  const handleToggleSelectRow = (id: Id<'campaigns'>, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleToggleSelectRow = (id: Id<'campaigns'>, e?: React.MouseEvent | React.SyntheticEvent) => {
+    if (e) e.stopPropagation()
     const next = new Set(selectedIds)
     if (next.has(id)) {
       next.delete(id)
@@ -186,63 +187,62 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
 
   return (
     <div className="space-y-4">
-      {/* Pure Data Table Card (Cards removed as requested) */}
-      <Card className="shadow-xs border-border/80">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border/60">
-          <div>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg font-bold">Campaigns Data Table</CardTitle>
-              <Badge variant="secondary" className="text-xs font-mono">
-                {filteredCampaigns.length} row{filteredCampaigns.length === 1 ? '' : 's'}
-              </Badge>
-            </div>
-            <CardDescription className="text-xs mt-0.5">
-              Click any cell to edit inline. Press Enter or click outside to save.
-            </CardDescription>
-          </div>
-
-          {/* Toolbar Controls */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-56">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+      {/* Table Container */}
+      <div className="rounded-xl border border-border/80 bg-card text-card-foreground shadow-xs overflow-hidden">
+        {/* Compressed Single-Row Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2 border-b border-border/60 bg-muted/20">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by title, niche, brief..."
+                placeholder="Search campaigns..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9 text-xs"
+                className="pl-8 h-8 text-xs bg-background/80"
               />
             </div>
 
-            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5 text-xs">
-              {(['all', 'active', 'planning', 'paused', 'completed'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setStatusFilter(filter)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
-                    statusFilter === filter
-                      ? 'bg-background text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger size="sm" className="h-8 text-xs w-[130px] bg-background/80">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="planning">Planning</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBatchDelete}
+                className="h-8 text-xs gap-1.5 px-2.5 shadow-xs"
+              >
+                <Trash2 className="size-3.5" />
+                <span>Delete ({selectedIds.size})</span>
+              </Button>
+            )}
 
             <Button
-              size="sm"
+              size="icon"
               onClick={() => setIsNewModalOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium shadow-xs"
+              className="size-8 shadow-xs"
+              title="Add Campaign"
+              aria-label="Add Campaign"
             >
-              <Plus className="size-3.5" />
-              <span>New Campaign</span>
+              <Plus className="size-4" />
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
+        <div>
           {filteredCampaigns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
               <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3">
@@ -264,65 +264,51 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-10 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedIds.size > 0 && selectedIds.size === filteredCampaigns.length
-                        }
-                        onChange={handleToggleSelectAll}
-                        aria-label="Select all campaigns"
-                        className="rounded border-input text-primary focus:ring-primary size-3.5 cursor-pointer"
-                      />
-                    </TableHead>
-                    <TableHead className="min-w-[220px] text-xs font-semibold">
-                      Title & Target Niche <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[130px] text-xs font-semibold">
-                      Status <span className="text-[10px] text-muted-foreground font-normal">(Select)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[140px] text-xs font-semibold">
-                      Budget <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[80px] text-xs font-semibold">
-                      Currency
-                    </TableHead>
-                    <TableHead className="min-w-[190px] text-xs font-semibold">
-                      Timeline <span className="text-[10px] text-muted-foreground font-normal">(Start → End)</span>
-                    </TableHead>
-                    <TableHead className="min-w-[260px] text-xs font-semibold">
-                      Deliverables / Brief <span className="text-[10px] text-muted-foreground font-normal">(Editable)</span>
-                    </TableHead>
-                    <TableHead className="w-24 text-right px-4 text-xs font-semibold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10 px-4 text-center">
+                    <Checkbox
+                      checked={
+                        selectedIds.size === 0
+                          ? false
+                          : selectedIds.size === filteredCampaigns.length
+                          ? true
+                          : 'indeterminate'
+                      }
+                      onCheckedChange={handleToggleSelectAll}
+                      aria-label="Select all campaigns"
+                    />
+                  </TableHead>
+                  <TableHead className="min-w-[200px] text-xs font-semibold">Title & Niche</TableHead>
+                  <TableHead className="min-w-[120px] text-xs font-semibold">Status</TableHead>
+                  <TableHead className="min-w-[120px] text-xs font-semibold">Budget</TableHead>
+                  <TableHead className="min-w-[80px] text-xs font-semibold">Currency</TableHead>
+                  <TableHead className="min-w-[170px] text-xs font-semibold">Timeline</TableHead>
+                  <TableHead className="min-w-[240px] text-xs font-semibold">Deliverables</TableHead>
+                  <TableHead className="w-20 text-right px-4 text-xs font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
 
-                <TableBody>
-                  {filteredCampaigns.map((camp) => {
-                    const isSelected = selectedIds.has(camp._id)
+              <TableBody>
+                {filteredCampaigns.map((camp) => {
+                  const isSelected = selectedIds.has(camp._id)
 
-                    return (
-                      <TableRow
-                        key={camp._id}
-                        className={`transition-colors group/row ${
-                          isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'
-                        }`}
-                      >
+                  return (
+                    <TableRow
+                      key={camp._id}
+                      data-state={isSelected ? "selected" : undefined}
+                      className="group/row"
+                    >
                         {/* Checkbox */}
                         <TableCell
                           onClick={(e) => handleToggleSelectRow(camp._id, e)}
-                          className="px-4 text-center"
+                          className="px-4 text-center cursor-pointer"
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={isSelected}
-                            onChange={() => {}}
+                            onCheckedChange={() => handleToggleSelectRow(camp._id)}
                             aria-label={`Select ${camp.title}`}
-                            className="rounded border-input text-primary focus:ring-primary size-3.5 cursor-pointer"
                           />
                         </TableCell>
 
@@ -583,10 +569,9 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
                   })}
                 </TableBody>
               </Table>
-            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Floating Batch Action Bar */}
       {selectedIds.size > 0 && (
