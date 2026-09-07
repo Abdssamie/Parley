@@ -7,17 +7,29 @@
 - **Repo:** none
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://disciplined-greyhound-279.eu-west-1.convex.cloud
-- **Components:** @convex-dev/static-hosting, @convex-dev/agent, @agentmail/convex, @firecrawl/firecrawl-convex
+- **Components:** @convex-dev/static-hosting, @convex-dev/agent, @agentmail/convex, @firecrawl/firecrawl-convex, @convex-dev/better-auth
 - **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, scheduled functions, realtime subscriptions, components
-- **Auth:** none
+- **Auth:** Better Auth (@convex-dev/better-auth) with session cookies and credential auth
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T16:36:00Z
+- **Last updated:** 2026-09-07T18:28:00Z
 
 ## Log
 
+### 2026-09-07 - Better Auth Component, Dedicated Landing & Auth Pages, Protected Dashboard Gate
+Integrated `@convex-dev/better-auth` with Convex components and established secure route protection:
+- Mounted `@convex-dev/better-auth` component in `convex/convex.config.ts`, pinned `better-auth@~1.6.15` to comply with component peer dependencies, and configured `convex/auth.config.ts` provider.
+- Created `convex/auth.ts` configuring Convex database adapter, cross-domain origin rules, and reactive `getCurrentUser` query. Registered Better Auth HTTP endpoints with CORS support in `convex/http.ts`.
+- Created frontend authentication client (`src/lib/auth-client.ts`) with `convexClient()` and `crossDomainClient()` plugins, wrapping the app with `ConvexBetterAuthProvider` in `src/main.tsx`.
+- Built dedicated Landing Page (`/`):
+  - Hero with punchy product copy, ambient top glow light effect (`blur-3xl bg-primary/45`), background dot pattern overlay, full two-column workspace preview (mini-sidebar, 4 neutral KPI cards, dual-line wave velocity chart, active talent negotiations table), and smooth bottom gradient fade overlay.
+  - 4-pillar product features grid (Creator Intelligence, Autonomous Negotiations, Unified Inbound Inbox, Budget Guardrails).
+  - Clear segmented billing interval switcher (Monthly vs Annual with `Save 20%` pill tag) across Starter, Growth, and Enterprise tiers.
+  - Expandable FAQ and clean product footer with consistent Parley branding.
+- Built dedicated auth pages (`/sign-in` and `/sign-up`) with credentials authentication, form validation, error banners, and a convenient one-click demo login option.
+- Enforced strict authorization guard (`src/components/auth/ProtectedRoute.tsx`) on `/dashboard`: unauthenticated requests cannot access the CRM dashboard and are immediately redirected to `/sign-in`. Authenticated users receive a header `UserMenu` with profile info and a clean Sign Out trigger.
+
 ### 2026-09-07 - AgentMail, Firecrawl Components & Neutral Cards
-Integrated official Convex components for AgentMail and Firecrawl, and overhauled dashboard metric cards to neutral Claymorphism styling:
 - Mounted `@agentmail/convex` component (`convex/convex.config.ts`). Created `convex/email.ts` providing durable send mutations, reactive thread and inbox queries, delivery status tracking, and automated inbound mail routing directly into the AI negotiation loop (`api.agent.processInboundWithAgent`). Mounted Svix-verified `/agentmail/webhook` route in `convex/http.ts`.
 - Mounted `@firecrawl/firecrawl-convex` component (`convex/convex.config.ts`) with typed component env. Refactored `convex/firecrawl.ts` to `FirecrawlClient` executing within Convex's native runtime (removed `"use node"`), retaining fallback simulation for offline testing while unlocking web search, site mapping, and durable multi-page site crawls (`startDurableCrawl`, `getCrawlProgress`, `listCrawlPages`).
 - Built neutral Claymorphism card primitives (`src/components/ui/neutral-card.tsx`) featuring `NeutralStatCard` (pill badges, high-contrast stats, micro-trend notes) and `NeutralWaveChartCard` (interactive 3m/30d/7d range switcher with dual-spline gradient waveform visualization). Replaced colorful icon-box metric cards in `src/components/DashboardOverview.tsx` and `src/components/CampaignMetrics.tsx`.

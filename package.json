@@ -14,11 +14,13 @@
     "@ai-sdk/provider": "^4.0.10",
     "@ai-sdk/provider-utils": "^5.0.36",
     "@convex-dev/agent": "^0.7.1",
+    "@convex-dev/better-auth": "^0.12.5",
     "@convex-dev/static-hosting": "^0.2.1",
     "@firecrawl/firecrawl-convex": "^0.1.1",
     "@mendable/firecrawl-js": "^4.38.0",
     "@tanstack/react-router": "^1.170.32",
     "ai": "^7.0.93",
+    "better-auth": "^1.6.30",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.2.5",
@@ -29,11 +31,6 @@
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.5.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

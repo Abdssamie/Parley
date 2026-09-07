@@ -3,8 +3,13 @@ import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { agentmail } from "./email";
+import { authComponent, createAuth } from "./auth";
 
 const http = httpRouter();
+
+// Mount Better Auth HTTP endpoints with CORS support
+authComponent.registerRoutes(http, createAuth, { cors: true });
+
 
 http.route({
   path: "/agentmail/webhook",

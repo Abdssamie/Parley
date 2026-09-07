@@ -4,6 +4,7 @@ import staticHosting from "@convex-dev/static-hosting/convex.config";
 import agent from "@convex-dev/agent/convex.config";
 import agentmail from "@agentmail/convex/convex.config";
 import firecrawl from "@firecrawl/firecrawl-convex/convex.config";
+import betterAuth from "@convex-dev/better-auth/convex.config";
 
 const app = defineApp({
   env: {
@@ -24,6 +25,7 @@ app.use(firecrawl, {
     FIRECRAWL_API_URL: app.env.FIRECRAWL_API_URL,
   },
 });
+app.use(betterAuth);
 
 export default app;
 

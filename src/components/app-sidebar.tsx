@@ -58,7 +58,7 @@ export function AppSidebar({
                 <Sparkles className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-semibold tracking-tight">Bloomshine</span>
+                <span className="truncate font-semibold tracking-tight">Parley</span>
                 <span className="truncate text-xs text-muted-foreground font-normal">Autonomous CRM</span>
               </div>
             </SidebarMenuButton>

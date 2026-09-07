@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ConvexReactClient } from 'convex/react'
+import { ConvexBetterAuthProvider, type AuthClient } from '@convex-dev/better-auth/react'
+import { authClient } from './lib/auth-client'
 import {
   createRouter,
   RouterProvider,
@@ -9,28 +11,64 @@ import {
   Outlet,
 } from '@tanstack/react-router'
 import { App } from './App'
+import { LandingPage } from './pages/LandingPage'
+import { SignInPage } from './pages/SignInPage'
+import { SignUpPage } from './pages/SignUpPage'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import './index.css'
 
 // 1. Initialize Convex Client
-const convexUrl = import.meta.env.VITE_CONVEX_URL || 'https://disciplined-greyhound-279.eu-west-1.convex.cloud'
+const convexUrl =
+  import.meta.env.VITE_CONVEX_URL ||
+  'https://disciplined-greyhound-279.eu-west-1.convex.cloud'
 const convex = new ConvexReactClient(convexUrl)
 
-// 2. Setup TanStack Router Root and Routes
+// 2. Setup TanStack Router Root and Routes with Better Auth Provider
 const rootRoute = createRootRoute({
   component: () => (
-    <ConvexProvider client={convex}>
+    <ConvexBetterAuthProvider
+      client={convex}
+      authClient={authClient as unknown as AuthClient}
+    >
       <Outlet />
-    </ConvexProvider>
+    </ConvexBetterAuthProvider>
   ),
 })
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: App,
+  component: LandingPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute])
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sign-in',
+  component: SignInPage,
+})
+
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sign-up',
+  component: SignUpPage,
+})
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
+  component: () => (
+    <ProtectedRoute>
+      <App />
+    </ProtectedRoute>
+  ),
+})
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  signInRoute,
+  signUpRoute,
+  dashboardRoute,
+])
 
 const router = createRouter({ routeTree })
 
