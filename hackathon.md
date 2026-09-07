@@ -7,14 +7,20 @@
 - **Repo:** none
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://disciplined-greyhound-279.eu-west-1.convex.cloud
-- **Components:** @convex-dev/static-hosting, @convex-dev/agent
-- **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, real-time subscriptions, components
+- **Components:** @convex-dev/static-hosting, @convex-dev/agent, @agentmail/convex, @firecrawl/firecrawl-convex
+- **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, scheduled functions, realtime subscriptions, components
 - **Auth:** none
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T16:12:00Z
+- **Last updated:** 2026-09-07T16:36:00Z
 
 ## Log
+
+### 2026-09-07 - AgentMail, Firecrawl Components & Neutral Cards
+Integrated official Convex components for AgentMail and Firecrawl, and overhauled dashboard metric cards to neutral Claymorphism styling:
+- Mounted `@agentmail/convex` component (`convex/convex.config.ts`). Created `convex/email.ts` providing durable send mutations, reactive thread and inbox queries, delivery status tracking, and automated inbound mail routing directly into the AI negotiation loop (`api.agent.processInboundWithAgent`). Mounted Svix-verified `/agentmail/webhook` route in `convex/http.ts`.
+- Mounted `@firecrawl/firecrawl-convex` component (`convex/convex.config.ts`) with typed component env. Refactored `convex/firecrawl.ts` to `FirecrawlClient` executing within Convex's native runtime (removed `"use node"`), retaining fallback simulation for offline testing while unlocking web search, site mapping, and durable multi-page site crawls (`startDurableCrawl`, `getCrawlProgress`, `listCrawlPages`).
+- Built neutral Claymorphism card primitives (`src/components/ui/neutral-card.tsx`) featuring `NeutralStatCard` (pill badges, high-contrast stats, micro-trend notes) and `NeutralWaveChartCard` (interactive 3m/30d/7d range switcher with dual-spline gradient waveform visualization). Replaced colorful icon-box metric cards in `src/components/DashboardOverview.tsx` and `src/components/CampaignMetrics.tsx`.
 
 ### 2026-09-07 - Refine Data Tables, Checkboxes & Scrollbar Theme
 Refined CRM data table UX and dark theme integration:

@@ -7,8 +7,10 @@ dist-ssr/
 *.tsbuildinfo
 
 # Local env files
+.env
 .env.local
 .env.*.local
+.env.convex
 
 # Editor & OS
 .DS_Store

@@ -1,16 +1,18 @@
-"use node";
-
-import Firecrawl, { type Document, type MapData } from "@mendable/firecrawl-js";
-import { action } from "./_generated/server";
+import { action, query } from "./_generated/server";
+import { components } from "./_generated/api";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
+import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 import type { CrawledCreatorProfile, FirecrawlMapResult } from "./integrations/firecrawl";
+
+const firecrawl = new FirecrawlClient(components.firecrawl);
 
 export const scrapeCreator = action({
   args: {
     url: v.string(),
     targetNiche: v.string(),
   },
-  handler: async (_ctx, args): Promise<CrawledCreatorProfile> => {
+  handler: async (ctx, args): Promise<CrawledCreatorProfile> => {
     const apiKey = process.env.FIRECRAWL_API_KEY;
 
     if (!apiKey) {
@@ -18,8 +20,7 @@ export const scrapeCreator = action({
     }
 
     try {
-      const firecrawl = new Firecrawl({ apiKey });
-      const doc: Document = await firecrawl.scrape(args.url, {
+      const doc = await firecrawl.scrape(ctx, args.url, {
         formats: ["markdown"],
         onlyMainContent: true,
         waitFor: 1000,
@@ -47,7 +48,7 @@ export const scrapeCreator = action({
         baseRate: parsedRate,
       };
     } catch (err) {
-      console.warn("Firecrawl SDK scrape failed, falling back to simulated profile:", err);
+      console.warn("Firecrawl component scrape failed, falling back to simulated profile:", err);
       return getSimulatedCreatorProfile(args.url, args.targetNiche);
     }
   },
@@ -57,7 +58,7 @@ export const mapSubpages = action({
   args: {
     baseUrl: v.string(),
   },
-  handler: async (_ctx, args): Promise<FirecrawlMapResult> => {
+  handler: async (ctx, args): Promise<FirecrawlMapResult> => {
     const apiKey = process.env.FIRECRAWL_API_KEY;
 
     if (!apiKey) {
@@ -65,8 +66,7 @@ export const mapSubpages = action({
     }
 
     try {
-      const firecrawl = new Firecrawl({ apiKey });
-      const mapData: MapData = await firecrawl.map(args.baseUrl, {
+      const mapData = await firecrawl.map(ctx, args.baseUrl, {
         limit: 20,
       });
 
@@ -83,9 +83,65 @@ export const mapSubpages = action({
         mediaKitUrl,
       };
     } catch (err) {
-      console.warn("Firecrawl SDK map call failed:", err);
+      console.warn("Firecrawl component map call failed:", err);
       return getFallbackMapResult(args.baseUrl);
     }
+  },
+});
+
+/**
+ * Web search powered by Firecrawl component, optionally scraping top results.
+ */
+export const searchWeb = action({
+  args: {
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await firecrawl.search(ctx, args.query, {
+      limit: args.limit ?? 5,
+      scrapeOptions: { formats: ["markdown"] },
+    });
+  },
+});
+
+/**
+ * Start a durable crawl across an entire site.
+ */
+export const startDurableCrawl = action({
+  args: {
+    url: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await firecrawl.startCrawl(ctx, {
+      url: args.url,
+      options: {
+        limit: args.limit ?? 25,
+        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+      },
+      mode: "poll",
+    });
+  },
+});
+
+/**
+ * Live crawl progress query.
+ */
+export const getCrawlProgress = query({
+  args: { crawlId: v.string() },
+  handler: async (ctx, args) => {
+    return await firecrawl.getCrawl(ctx, args.crawlId);
+  },
+});
+
+/**
+ * Paginated pages query for durable crawls.
+ */
+export const listCrawlPages = query({
+  args: { crawlId: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await firecrawl.listPages(ctx, args);
   },
 });
 

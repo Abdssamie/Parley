@@ -2,8 +2,20 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { agentmail } from "./email";
 
 const http = httpRouter();
+
+http.route({
+  path: "/agentmail/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    return await agentmail.handleWebhook(
+      ctx as unknown as Parameters<typeof agentmail.handleWebhook>[0],
+      req
+    );
+  }),
+});
 
 http.route({
   path: "/agentmail-webhook",
