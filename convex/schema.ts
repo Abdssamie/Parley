@@ -38,6 +38,7 @@ export default defineSchema({
     humanOverride: v.boolean(),
     pendingApproval: v.boolean(),
     draftCounterOffer: v.optional(v.string()),
+    agentComponentThreadId: v.optional(v.string()),
     lastActivityAt: v.number(),
   })
     .index("by_campaign", ["campaignId"])

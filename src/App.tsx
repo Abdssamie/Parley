@@ -36,7 +36,7 @@ export const App: React.FC = () => {
   const submitHumanMessageMutation = useMutation(api.threads.submitHumanMessage)
   const updateCampaignMutation = useMutation(api.campaigns.update)
   const researchAndPitchAction = useAction(api.pipeline.autonomousResearchAndPitch)
-  const processInboundReplyAction = useAction(api.pipeline.processInboundReply)
+  const processInboundWithAgentAction = useAction(api.agent.processInboundWithAgent)
 
   // 5. Derived State during Render (React Best Practice: Zero setState in useEffect)
   const threads: EnrichedThread[] = rawThreads ?? []
@@ -82,7 +82,7 @@ export const App: React.FC = () => {
     threadId: Id<'threads'>
     incomingBody: string
   }) => {
-    await processInboundReplyAction({
+    await processInboundWithAgentAction({
       threadId: params.threadId,
       incomingBody: params.incomingBody,
     })
@@ -108,7 +108,7 @@ export const App: React.FC = () => {
         ]
         const randomReply = testReplies[Math.floor(Math.random() * testReplies.length)]
 
-        await processInboundReplyAction({
+        await processInboundWithAgentAction({
           threadId: candidate._id,
           incomingBody: randomReply,
         })

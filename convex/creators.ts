@@ -15,6 +15,16 @@ export const get = query({
   },
 });
 
+export const getByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("creators")
+      .filter((q) => q.eq(q.field("contactEmail"), args.email))
+      .first();
+  },
+});
+
 export const create = mutation({
   args: {
     name: v.string(),

@@ -59,6 +59,28 @@ export const get = query({
   },
 });
 
+export const getByAgentMailThreadId = query({
+  args: { agentMailThreadId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("threads")
+      .withIndex("by_agentmail_thread", (q) =>
+        q.eq("agentMailThreadId", args.agentMailThreadId)
+      )
+      .first();
+  },
+});
+
+export const getByCreatorId = query({
+  args: { creatorId: v.id("creators") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("threads")
+      .withIndex("by_creator", (q) => q.eq("creatorId", args.creatorId))
+      .first();
+  },
+});
+
 export const updateStage = mutation({
   args: {
     id: v.id("threads"),
@@ -217,4 +239,17 @@ export const flagForHumanApproval = mutation({
     });
   },
 });
+
+export const setAgentComponentThreadId = mutation({
+  args: {
+    threadId: v.id("threads"),
+    agentComponentThreadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.threadId, {
+      agentComponentThreadId: args.agentComponentThreadId,
+    });
+  },
+});
+
 

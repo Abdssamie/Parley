@@ -5,6 +5,8 @@ export interface AgentMailSendParams {
   subject: string;
   body: string;
   threadId?: string;
+  inReplyTo?: string;
+  replyTo?: string;
 }
 
 export interface AgentMailSendResult {
@@ -12,8 +14,19 @@ export interface AgentMailSendResult {
   messageId: string;
   threadId: string;
   simulated: boolean;
+  dispatchedAt: number;
 }
 
+export interface AgentMailInboxStatus {
+  inboxId: string;
+  address: string;
+  active: boolean;
+}
+
+/**
+ * Dispatches an email to a creator via AgentMail API.
+ * Preserves message threading, inReplyTo headers, and provides fallback simulation for testing.
+ */
 export async function sendAgentMail(
   params: AgentMailSendParams
 ): Promise<AgentMailSendResult> {
@@ -22,18 +35,30 @@ export async function sendAgentMail(
 
   if (apiKey) {
     try {
+      const payload: {
+        to: string;
+        subject: string;
+        text: string;
+        threadId?: string;
+        inReplyTo?: string;
+        replyTo?: string;
+      } = {
+        to: params.to,
+        subject: params.subject,
+        text: params.body,
+      };
+
+      if (params.threadId) payload.threadId = params.threadId;
+      if (params.inReplyTo) payload.inReplyTo = params.inReplyTo;
+      if (params.replyTo) payload.replyTo = params.replyTo;
+
       const res = await fetch(`https://api.agentmail.to/v1/inboxes/${agentInbox}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          to: params.to,
-          subject: params.subject,
-          text: params.body,
-          threadId: params.threadId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -43,10 +68,14 @@ export async function sendAgentMail(
           messageId: data.id || `am_msg_${Date.now()}`,
           threadId: data.threadId || params.threadId || `am_th_${Date.now()}`,
           simulated: false,
+          dispatchedAt: Date.now(),
         };
+      } else {
+        const errorText = await res.text();
+        console.warn(`AgentMail API returned error status ${res.status}: ${errorText}`);
       }
     } catch (err) {
-      console.warn("AgentMail live dispatch failed, using fallback:", err);
+      console.warn("AgentMail live dispatch failed, using realistic mock fallback:", err);
     }
   }
 
@@ -59,5 +88,19 @@ export async function sendAgentMail(
     messageId: mockMessageId,
     threadId: mockThreadId,
     simulated: true,
+    dispatchedAt: Date.now(),
+  };
+}
+
+/**
+ * Retrieves status of the configured AgentMail inbox.
+ */
+export async function getAgentMailInboxStatus(): Promise<AgentMailInboxStatus> {
+  const inboxId = process.env.AGENTMAIL_INBOX_ID || "inbox_parley_01";
+  const address = process.env.AGENTMAIL_INBOX_ADDRESS || `${inboxId}@agentmail.to`;
+  return {
+    inboxId,
+    address,
+    active: true,
   };
 }

@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as agent from "../agent.js";
 import type * as campaigns from "../campaigns.js";
 import type * as creators from "../creators.js";
+import type * as firecrawl from "../firecrawl.js";
 import type * as http from "../http.js";
 import type * as integrations_agentmail from "../integrations/agentmail.js";
 import type * as integrations_firecrawl from "../integrations/firecrawl.js";
@@ -25,8 +27,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agent: typeof agent;
   campaigns: typeof campaigns;
   creators: typeof creators;
+  firecrawl: typeof firecrawl;
   http: typeof http;
   "integrations/agentmail": typeof integrations_agentmail;
   "integrations/firecrawl": typeof integrations_firecrawl;
@@ -64,4 +68,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   staticHosting: import("@convex-dev/static-hosting/_generated/component.js").ComponentApi<"staticHosting">;
+  agent: import("@convex-dev/agent/_generated/component.js").ComponentApi<"agent">;
 };

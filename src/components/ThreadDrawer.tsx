@@ -150,6 +150,19 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             </div>
           )}
 
+          {/* Convex AI Agent Component Thread Badge */}
+          {thread.agentComponentThreadId && (
+            <div className="mt-2.5 flex items-center justify-between rounded-lg bg-indigo-50/80 px-2.5 py-1.5 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-900/60">
+              <div className="flex items-center gap-1.5">
+                <Bot className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="font-medium text-[11px]">Convex AI Agent Thread:</span>
+              </div>
+              <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold truncate max-w-[180px]">
+                {thread.agentComponentThreadId}
+              </span>
+            </div>
+          )}
+
           {/* Tab Selector */}
           <div className="mt-4 flex border-b border-slate-200 dark:border-slate-800">
             <button

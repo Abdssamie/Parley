@@ -59,7 +59,7 @@ Respond ONLY with valid JSON in this structure:
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: process.env.OPENAI_MODEL || "gpt-5.6-sol",
           messages: [{ role: "user", content: prompt }],
           response_format: { type: "json_object" },
           temperature: 0.3,

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, mutation } from "./_generated/server";
 import { api } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
-import { crawlCreatorProfile } from "./integrations/firecrawl";
+import type { CrawledCreatorProfile } from "./integrations/firecrawl";
 import { sendAgentMail } from "./integrations/agentmail";
 import { analyzeAndDraftNegotiation } from "./integrations/openai";
 
@@ -22,7 +22,10 @@ export const autonomousResearchAndPitch = action({
     if (!campaign) throw new Error("Campaign not found");
 
     // 2. Firecrawl Scraping
-    const crawled = await crawlCreatorProfile(args.creatorUrl, campaign.targetNiche);
+    const crawled: CrawledCreatorProfile = await ctx.runAction(api.firecrawl.scrapeCreator, {
+      url: args.creatorUrl,
+      targetNiche: campaign.targetNiche,
+    });
 
     // 3. Create Creator Record in Convex
     const creatorId: Id<"creators"> = await ctx.runMutation(api.creators.create, {

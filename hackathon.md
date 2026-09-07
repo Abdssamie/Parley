@@ -7,14 +7,20 @@
 - **Repo:** none
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://disciplined-greyhound-279.eu-west-1.convex.cloud
-- **Components:** @convex-dev/static-hosting
-- **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, real-time subscriptions
+- **Components:** @convex-dev/static-hosting, @convex-dev/agent
+- **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, real-time subscriptions, components
 - **Auth:** none
-- **AI models:** gpt-4o-mini
+- **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-06T23:35:12Z
+- **Last updated:** 2026-09-07T15:18:00Z
 
 ## Log
+
+### 2026-09-07 - Firecrawl SDK & Node Runtime Integration
+Migrated Firecrawl tool integration to the official `@mendable/firecrawl-js` npm SDK. Isolated Node.js built-ins (`node:buffer`, `node:assert`, `undici`) into a dedicated Node-runtime Convex action module (`convex/firecrawl.ts` with `"use node";`), maintaining clean edge V8 execution for queries, mutations, and agent tools across `convex/agent.ts` and `convex/pipeline.ts`. Re-verified end-to-end bundling, TypeScript checks, and Vite client build.
+
+### 2026-09-07 - e391b4c
+Mounted `@convex-dev/agent` component in `convex/convex.config.ts` with durable thread persistence. Built autonomous creator collaboration agent (`parleyNegotiator`) powered by OpenAI (`gpt-5.6-sol`) in `convex/agent.ts`. Integrated robust Firecrawl tools for structured media kit scraping, reach extraction, and subpage mapping (`convex/integrations/firecrawl.ts`). Added AgentMail outbound email delivery tools and closed-loop inbound webhook dispatch (`convex/http.ts`, `convex/integrations/agentmail.ts`) to auto-trigger agent negotiation steps upon creator email replies.
 
 ### 2026-09-06 - 842ae38
 Renamed project branding to Parley across client interface, Convex server functions, AI prompt contracts, and package configuration (`package.json`, `index.html`, `src/components/Navbar.tsx`, `convex/pipeline.ts`).

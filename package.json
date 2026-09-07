@@ -9,8 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.60",
+    "@ai-sdk/provider": "^4.0.10",
+    "@ai-sdk/provider-utils": "^5.0.36",
+    "@convex-dev/agent": "^0.7.1",
     "@convex-dev/static-hosting": "^0.2.1",
+    "@mendable/firecrawl-js": "^4.38.0",
     "@tanstack/react-router": "^1.170.32",
+    "ai": "^7.0.93",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.2.5",
@@ -19,7 +25,8 @@
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.5.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
