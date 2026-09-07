@@ -17,6 +17,16 @@ import {
 import { CrmHeader } from '../common/CrmHeader'
 import { StatusBadge } from '../common/StatusBadge'
 import { NewCampaignModal } from './NewCampaignModal'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 interface CampaignsViewProps {
   onSelectCampaign?: (campaign: Doc<'campaigns'>) => void
@@ -59,7 +69,7 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0c0d10] text-slate-200">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background text-foreground">
       {/* Top Header */}
       <CrmHeader
         title="Campaigns"
@@ -70,243 +80,230 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
 
       {/* Main Content Area */}
       {campaigns.length === 0 ? (
-        /* Empty State matching Image 1 exactly */
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-          {/* Stylized Isometric Graphic */}
           <div className="relative w-44 h-40 mb-6 flex items-center justify-center">
             <svg
               viewBox="0 0 200 160"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="w-full h-full drop-shadow-[0_10px_25px_rgba(0,120,255,0.15)]"
+              className="w-full h-full drop-shadow-md"
             >
-              {/* Lower Isometric Plate / Shadow */}
               <path
                 d="M100 135 L170 95 L170 108 L100 148 L30 108 L30 95 Z"
-                fill="#152438"
-                stroke="#2a4568"
-                strokeWidth="2"
+                fill="currentColor"
+                className="text-muted/40"
               />
-              {/* Isometric Base Sides */}
               <path
                 d="M30 95 L100 135 L100 148 L30 108 Z"
-                fill="#1c3452"
-                stroke="#2a4568"
-                strokeWidth="2"
+                fill="currentColor"
+                className="text-muted/60"
               />
               <path
                 d="M100 135 L170 95 L170 108 L100 148 Z"
-                fill="#24446b"
-                stroke="#2a4568"
-                strokeWidth="2"
+                fill="currentColor"
+                className="text-muted/80"
               />
-              {/* Isometric Top Surface */}
               <path
                 d="M100 55 L170 95 L100 135 L30 95 Z"
-                fill="#38bdf8"
-                stroke="#0284c7"
-                strokeWidth="2.5"
+                fill="var(--primary)"
+                opacity="0.8"
               />
-              {/* Center Cutout Disk */}
               <ellipse
                 cx="100"
                 cy="95"
                 rx="20"
                 ry="11"
-                fill="#0f172a"
-                stroke="#0369a1"
-                strokeWidth="2"
-              />
-              {/* Floating Token with X */}
-              <circle cx="155" cy="72" r="10" fill="#38bdf8" stroke="#0284c7" strokeWidth="2" />
-              <path
-                d="M151 68 L159 76 M159 68 L151 76"
-                stroke="#082f49"
-                strokeWidth="2"
-                strokeLinecap="round"
+                fill="var(--card)"
               />
             </svg>
           </div>
 
-          <h3 className="text-base font-bold text-white mb-1">Add your first Campaign</h3>
-          <p className="text-xs text-slate-400 max-w-sm mb-6">
-            Use our API or add your first Campaign manually
+          <h3 className="text-base font-bold text-foreground mb-1">Add your first Campaign</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mb-6">
+            Create an active campaign to set target niche, deliverables, and launch autonomous outreach.
           </p>
 
-          <button
+          <Button
             type="button"
+            variant="default"
+            size="sm"
             onClick={() => setIsNewModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#171a22] hover:bg-[#202430] text-slate-200 hover:text-white border border-[#2b3040] rounded-md font-medium text-xs shadow transition-colors"
+            className="flex items-center gap-1.5 shadow-sm font-medium"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add a Campaign</span>
-          </button>
+          </Button>
         </div>
       ) : (
-        /* Data Table matching Image 1 */
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left text-xs border-collapse select-none">
-            <thead className="sticky top-0 z-10 bg-[#13151b] border-b border-[#22252e] text-slate-400 font-medium text-[11px]">
-              <tr className="h-9">
-                <th className="w-10 px-3 text-center border-r border-[#1c1f26]">
-                  <button
-                    type="button"
-                    onClick={handleToggleSelectAll}
-                    className="text-slate-400 hover:text-slate-200 flex items-center justify-center w-full"
-                  >
-                    {selectedIds.size > 0 && selectedIds.size === campaigns.length ? (
-                      <CheckSquare className="w-3.5 h-3.5 text-rose-400" />
-                    ) : (
-                      <Square className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </th>
-
-                <th className="px-3 min-w-[200px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5" />
-                    <span>Title</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Status</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>Budget</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[90px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Currency</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Start</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>End</span>
-                  </div>
-                </th>
-
-                <th className="px-3 min-w-[240px] border-r border-[#1c1f26]">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Brief</span>
-                  </div>
-                </th>
-
-                <th className="w-10 px-2 text-center text-slate-500 hover:text-slate-300 cursor-pointer">
-                  <Plus className="w-3.5 h-3.5 mx-auto" />
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[#1c1f26]">
-              {campaigns.map((camp) => {
-                const isSelected = selectedIds.has(camp._id)
-                const symbol =
-                  camp.currency === 'EUR' ? '€' : camp.currency === 'GBP' ? '£' : '$'
-
-                return (
-                  <tr
-                    key={camp._id}
-                    onClick={() => onSelectCampaign && onSelectCampaign(camp)}
-                    className={`h-9 hover:bg-[#141720] cursor-pointer transition-colors ${
-                      isSelected ? 'bg-[#1c1822]' : ''
-                    }`}
-                  >
-                    <td
-                      onClick={(e) => handleToggleSelectRow(camp._id, e)}
-                      className="px-3 text-center border-r border-[#1c1f26]"
+        <div className="flex-1 overflow-auto p-4">
+          <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-b border-border/60">
+                  <TableHead className="w-10 px-3 text-center">
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      aria-label={selectedIds.size > 0 && selectedIds.size === campaigns.length ? "Deselect all campaigns" : "Select all campaigns"}
+                      className="text-muted-foreground hover:text-foreground flex items-center justify-center w-full"
                     >
-                      <button
-                        type="button"
-                        className="text-slate-500 hover:text-slate-300 flex items-center justify-center w-full"
+                      {selectedIds.size > 0 && selectedIds.size === campaigns.length ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Square className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[200px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Title</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Status</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Budget</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[90px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Currency</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Start</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>End</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="px-3 min-w-[240px] font-semibold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Brief</span>
+                    </div>
+                  </TableHead>
+
+                  <TableHead className="w-10 px-2 text-center"></TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {campaigns.map((camp) => {
+                  const isSelected = selectedIds.has(camp._id)
+                  const symbol =
+                    camp.currency === 'EUR' ? '€' : camp.currency === 'GBP' ? '£' : '$'
+
+                  return (
+                    <TableRow
+                      key={camp._id}
+                      onClick={() => onSelectCampaign && onSelectCampaign(camp)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <TableCell
+                        onClick={(e) => handleToggleSelectRow(camp._id, e)}
+                        className="px-3 text-center"
                       >
-                        {isSelected ? (
-                          <CheckSquare className="w-3.5 h-3.5 text-rose-400" />
-                        ) : (
-                          <Square className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </td>
+                        <button
+                          type="button"
+                          aria-label={isSelected ? `Deselect ${camp.title}` : `Select ${camp.title}`}
+                          className="text-muted-foreground hover:text-foreground flex items-center justify-center w-full"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <Square className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] font-medium text-slate-200 truncate">
-                      {camp.title}
-                    </td>
+                      <TableCell className="px-3 font-medium text-foreground truncate">
+                        {camp.title}
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26]">
-                      <StatusBadge status={camp.status} />
-                    </td>
+                      <TableCell className="px-3">
+                        <StatusBadge status={camp.status} />
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-200 font-medium">
-                      {symbol}
-                      {camp.budget.toLocaleString()}
-                    </td>
+                      <TableCell className="px-3 font-semibold text-foreground">
+                        {symbol}
+                        {camp.budget.toLocaleString()}
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400 font-mono">
-                      {camp.currency}
-                    </td>
+                      <TableCell className="px-3 text-muted-foreground font-mono text-xs">
+                        {camp.currency}
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400">
-                      {camp.startDate || '—'}
-                    </td>
+                      <TableCell className="px-3 text-muted-foreground text-xs">
+                        {camp.startDate || '—'}
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400">
-                      {camp.endDate || '—'}
-                    </td>
+                      <TableCell className="px-3 text-muted-foreground text-xs">
+                        {camp.endDate || '—'}
+                      </TableCell>
 
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400 truncate max-w-xs">
-                      {camp.brief}
-                    </td>
+                      <TableCell className="px-3 text-muted-foreground truncate max-w-xs text-xs">
+                        {camp.brief}
+                      </TableCell>
 
-                    <td className="px-2 text-center text-slate-500"></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      <TableCell className="px-2 text-center text-muted-foreground"></TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-[#171a22] border border-[#2d3240] rounded-xl shadow-2xl flex items-center gap-4 text-xs z-30">
-          <span className="font-medium text-rose-400">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-card border border-border shadow-xl rounded-xl flex items-center gap-4 text-xs z-30">
+          <Badge variant="default" className="font-medium">
             {selectedIds.size} campaign{selectedIds.size > 1 ? 's' : ''} selected
-          </span>
-          <div className="h-4 w-px bg-slate-700" />
-          <button
+          </Badge>
+          <div className="h-4 w-px bg-border" />
+          <Button
             type="button"
+            variant="destructive"
+            size="sm"
             onClick={handleBatchDelete}
-            className="flex items-center gap-1 text-rose-400 hover:text-rose-300 font-medium"
+            className="h-7 text-xs flex items-center gap-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Delete Selected</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setSelectedIds(new Set())}
-            className="text-slate-400 hover:text-slate-200 text-[11px]"
+            className="h-7 text-xs text-muted-foreground"
           >
             Deselect
-          </button>
+          </Button>
         </div>
       )}
 

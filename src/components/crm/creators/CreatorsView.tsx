@@ -12,7 +12,6 @@ import {
   Eye,
   Activity,
   DollarSign,
-  ChevronDown,
   Trash2,
   CheckSquare,
   Square,
@@ -24,6 +23,18 @@ import { PlatformBadge } from '../common/PlatformBadge'
 import { AvatarInitial } from '../common/AvatarInitial'
 import { CreatorDrawer } from './CreatorDrawer'
 import { NewCreatorModal } from './NewCreatorModal'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 
 interface CreatorsViewProps {
   onLaunchOutreach?: (creator: Doc<'creators'>) => void
@@ -180,7 +191,7 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0c0d10] text-slate-200">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background text-foreground">
       {/* Top Header */}
       <CrmHeader
         title="Creators"
@@ -193,24 +204,25 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
 
       {/* Filter / Search Tray */}
       {isFilterOpen && (
-        <div className="px-6 py-2.5 bg-[#12141a] border-b border-[#22252e] flex flex-wrap items-center gap-3 text-xs">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#171922] border border-[#272b38] rounded-md">
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-            <input
+        <div className="px-6 py-3 bg-card/50 border-b border-border/60 flex flex-wrap items-center gap-3 text-xs">
+          <div className="flex items-center gap-1.5 w-60">
+            <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <Input
               type="text"
               placeholder="Search name, email, niche..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none text-slate-200 placeholder-slate-500 focus:outline-none w-48 text-xs"
+              className="h-8 text-xs bg-background"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Platform:</span>
+            <span className="text-muted-foreground text-xs">Platform:</span>
             <select
               value={filterPlatform}
               onChange={(e) => setFilterPlatform(e.target.value)}
-              className="bg-[#171922] border border-[#272b38] rounded-md px-2 py-1 text-slate-200 focus:outline-none"
+              aria-label="Filter by platform"
+              className="h-8 bg-background border border-input rounded-md px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="all">All Platforms</option>
               <option value="youtube">YouTube</option>
@@ -222,11 +234,12 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Status:</span>
+            <span className="text-muted-foreground text-xs">Status:</span>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-[#171922] border border-[#272b38] rounded-md px-2 py-1 text-slate-200 focus:outline-none"
+              aria-label="Filter by status"
+              className="h-8 bg-background border border-input rounded-md px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="all">All Statuses</option>
               <option value="collected">Collected</option>
@@ -238,318 +251,323 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
           </div>
 
           {(searchQuery || filterPlatform !== 'all' || filterStatus !== 'all') && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setSearchQuery('')
                 setFilterPlatform('all')
                 setFilterStatus('all')
               }}
-              className="text-slate-400 hover:text-slate-200 underline ml-auto text-[11px]"
+              className="text-muted-foreground hover:text-foreground ml-auto text-xs"
             >
               Reset Filters
-            </button>
+            </Button>
           )}
         </div>
       )}
 
-      {/* Main Table Container */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-left text-xs border-collapse select-none">
-          {/* Table Header Row */}
-          <thead className="sticky top-0 z-10 bg-[#13151b] border-b border-[#22252e] text-slate-400 font-medium text-[11px]">
-            <tr className="h-9">
-              {/* Checkbox */}
-              <th className="w-10 px-3 text-center border-r border-[#1c1f26]">
-                <button
-                  type="button"
-                  onClick={handleToggleSelectAll}
-                  className="text-slate-400 hover:text-slate-200 flex items-center justify-center w-full"
-                >
-                  {selectedIds.size > 0 && selectedIds.size === filteredCreators.length ? (
-                    <CheckSquare className="w-3.5 h-3.5 text-pink-400" />
-                  ) : (
-                    <Square className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </th>
-
-              {/* Name */}
-              <th
-                onClick={() => toggleSort('name')}
-                className="px-3 min-w-[180px] border-r border-[#1c1f26] cursor-pointer hover:text-slate-200"
-              >
-                <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5" />
-                  <span>Name</span>
-                  {sortField === 'name' && (
-                    <span className="text-[10px] text-pink-400">
-                      {sortOrder === 'asc' ? '▲' : '▼'}
-                    </span>
-                  )}
-                </div>
-              </th>
-
-              {/* Status */}
-              <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Status</span>
-                </div>
-              </th>
-
-              {/* Platform */}
-              <th className="px-3 min-w-[110px] border-r border-[#1c1f26]">
-                <div className="flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Platform</span>
-                </div>
-              </th>
-
-              {/* Email */}
-              <th className="px-3 min-w-[190px] border-r border-[#1c1f26]">
-                <div className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Email</span>
-                </div>
-              </th>
-
-              {/* Country */}
-              <th className="px-3 min-w-[90px] border-r border-[#1c1f26]">
-                <div className="flex items-center gap-1.5">
-                  <Flag className="w-3.5 h-3.5" />
-                  <span>Country</span>
-                </div>
-              </th>
-
-              {/* Followers */}
-              <th
-                onClick={() => toggleSort('followers')}
-                className="px-3 min-w-[110px] border-r border-[#1c1f26] cursor-pointer hover:text-slate-200"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Followers</span>
-                  {sortField === 'followers' && (
-                    <span className="text-[10px] text-pink-400">
-                      {sortOrder === 'asc' ? '▲' : '▼'}
-                    </span>
-                  )}
-                </div>
-              </th>
-
-              {/* Views */}
-              <th
-                onClick={() => toggleSort('views')}
-                className="px-3 min-w-[100px] border-r border-[#1c1f26] cursor-pointer hover:text-slate-200"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Views</span>
-                  {sortField === 'views' && (
-                    <span className="text-[10px] text-pink-400">
-                      {sortOrder === 'asc' ? '▲' : '▼'}
-                    </span>
-                  )}
-                </div>
-              </th>
-
-              {/* Engagement */}
-              <th className="px-3 min-w-[100px] border-r border-[#1c1f26]">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>Engage...</span>
-                </div>
-              </th>
-
-              {/* Est. Cost */}
-              <th
-                onClick={() => toggleSort('estCost')}
-                className="px-3 min-w-[100px] cursor-pointer hover:text-slate-200"
-              >
-                <div className="flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  <span>Est. Cost</span>
-                  {sortField === 'estCost' && (
-                    <span className="text-[10px] text-pink-400">
-                      {sortOrder === 'asc' ? '▲' : '▼'}
-                    </span>
-                  )}
-                </div>
-              </th>
-            </tr>
-          </thead>
-
-          {/* Table Rows */}
-          <tbody className="divide-y divide-[#1c1f26]">
-            {filteredCreators.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
-                  No creators found. Add your first creator using &quot;New Creator&quot; above.
-                </td>
-              </tr>
-            ) : (
-              filteredCreators.map((creator) => {
-                const isSelected = selectedIds.has(creator._id)
-
-                return (
-                  <tr
-                    key={creator._id}
-                    onClick={() => setDrawerCreator(creator)}
-                    className={`h-9 hover:bg-[#141720] cursor-pointer transition-colors ${
-                      isSelected ? 'bg-[#181c26]' : ''
-                    }`}
+      {/* Main Table Container using shadcn Table */}
+      <div className="flex-1 overflow-auto p-4">
+        <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow className="border-b border-border/60">
+                {/* Checkbox */}
+                <TableHead className="w-10 px-3 text-center">
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    aria-label={selectedIds.size > 0 && selectedIds.size === filteredCreators.length ? "Deselect all creators" : "Select all creators"}
+                    className="text-muted-foreground hover:text-foreground flex items-center justify-center w-full"
                   >
-                    {/* Checkbox Column */}
-                    <td
-                      onClick={(e) => handleToggleSelectRow(creator._id, e)}
-                      className="px-3 text-center border-r border-[#1c1f26]"
-                    >
-                      <button
-                        type="button"
-                        className="text-slate-500 hover:text-slate-300 flex items-center justify-center w-full"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="w-3.5 h-3.5 text-pink-400" />
-                        ) : (
-                          <Square className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </td>
+                    {selectedIds.size > 0 && selectedIds.size === filteredCreators.length ? (
+                      <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </TableHead>
 
-                    {/* Name + Avatar Badge */}
-                    <td className="px-3 border-r border-[#1c1f26]">
-                      <div className="flex items-center gap-2">
-                        <AvatarInitial name={creator.name} />
-                        <span className="font-medium text-slate-200 hover:text-white truncate">
-                          {creator.name}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-3 border-r border-[#1c1f26]">
-                      <StatusBadge status={creator.status} />
-                    </td>
-
-                    {/* Platform */}
-                    <td className="px-3 border-r border-[#1c1f26]">
-                      <PlatformBadge platform={creator.platform} />
-                    </td>
-
-                    {/* Email */}
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400 font-mono text-[11px] truncate">
-                      {creator.email}
-                    </td>
-
-                    {/* Country */}
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400">
-                      {creator.country || '—'}
-                    </td>
-
-                    {/* Followers */}
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-300 font-medium">
-                      {creator.followers ? creator.followers.toLocaleString() : '—'}
-                    </td>
-
-                    {/* Views */}
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-300 font-medium">
-                      {creator.views ? creator.views.toLocaleString() : '—'}
-                    </td>
-
-                    {/* Engagement Rate */}
-                    <td className="px-3 border-r border-[#1c1f26] text-slate-400">
-                      {creator.engagementRate ? `${creator.engagementRate}%` : '—'}
-                    </td>
-
-                    {/* Est. Cost */}
-                    <td className="px-3 text-slate-300 font-medium">
-                      {creator.estCost ? `$${creator.estCost.toLocaleString()}` : '—'}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-
-          {/* Table Calculate Summary Footer (matches screenshot) */}
-          <tfoot className="sticky bottom-0 bg-[#12141a] border-t border-[#22252e] text-[11px] text-slate-400 font-medium">
-            <tr className="h-9">
-              <td className="px-3 border-r border-[#1c1f26]"></td>
-              <td className="px-3 border-r border-[#1c1f26]">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-white text-slate-400"
+                {/* Name */}
+                <TableHead
+                  onClick={() => toggleSort('name')}
+                  className="px-3 min-w-[180px] cursor-pointer hover:text-foreground font-semibold text-xs"
                 >
-                  <span>Calculate</span>
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-              </td>
-              <td className="px-3 border-r border-[#1c1f26]">{summary.count} creators</td>
-              <td className="px-3 border-r border-[#1c1f26]"></td>
-              <td className="px-3 border-r border-[#1c1f26]"></td>
-              <td className="px-3 border-r border-[#1c1f26]"></td>
-              <td className="px-3 border-r border-[#1c1f26] text-slate-300">
-                {summary.totalFollowers > 0 ? summary.totalFollowers.toLocaleString() : '—'}
-              </td>
-              <td className="px-3 border-r border-[#1c1f26] text-slate-300">
-                {summary.totalViews > 0 ? summary.totalViews.toLocaleString() : '—'}
-              </td>
-              <td className="px-3 border-r border-[#1c1f26]"></td>
-              <td className="px-3 text-slate-300">
-                {summary.avgCost > 0 ? `Avg $${summary.avgCost.toLocaleString()}` : '—'}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Name</span>
+                    {sortField === 'name' && (
+                      <span className="text-[10px] text-primary">
+                        {sortOrder === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Status */}
+                <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Status</span>
+                  </div>
+                </TableHead>
+
+                {/* Platform */}
+                <TableHead className="px-3 min-w-[110px] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Platform</span>
+                  </div>
+                </TableHead>
+
+                {/* Email */}
+                <TableHead className="px-3 min-w-[190px] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Email</span>
+                  </div>
+                </TableHead>
+
+                {/* Country */}
+                <TableHead className="px-3 min-w-[90px] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Country</span>
+                  </div>
+                </TableHead>
+
+                {/* Followers */}
+                <TableHead
+                  onClick={() => toggleSort('followers')}
+                  className="px-3 min-w-[110px] cursor-pointer hover:text-foreground font-semibold text-xs"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Followers</span>
+                    {sortField === 'followers' && (
+                      <span className="text-[10px] text-primary">
+                        {sortOrder === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Views */}
+                <TableHead
+                  onClick={() => toggleSort('views')}
+                  className="px-3 min-w-[100px] cursor-pointer hover:text-foreground font-semibold text-xs"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Views</span>
+                    {sortField === 'views' && (
+                      <span className="text-[10px] text-primary">
+                        {sortOrder === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+
+                {/* Engagement */}
+                <TableHead className="px-3 min-w-[100px] font-semibold text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Engage</span>
+                  </div>
+                </TableHead>
+
+                {/* Est. Cost */}
+                <TableHead
+                  onClick={() => toggleSort('estCost')}
+                  className="px-3 min-w-[100px] cursor-pointer hover:text-foreground font-semibold text-xs"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Est. Cost</span>
+                    {sortField === 'estCost' && (
+                      <span className="text-[10px] text-primary">
+                        {sortOrder === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            {/* Table Rows */}
+            <TableBody>
+              {filteredCreators.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                    No creators found. Add your first creator using &quot;New Creator&quot; above.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCreators.map((creator) => {
+                  const isSelected = selectedIds.has(creator._id)
+
+                  return (
+                    <TableRow
+                      key={creator._id}
+                      onClick={() => setDrawerCreator(creator)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      {/* Checkbox Column */}
+                      <TableCell
+                        onClick={(e) => handleToggleSelectRow(creator._id, e)}
+                        className="px-3 text-center"
+                      >
+                        <button
+                          type="button"
+                          aria-label={isSelected ? `Deselect ${creator.name}` : `Select ${creator.name}`}
+                          className="text-muted-foreground hover:text-foreground flex items-center justify-center w-full"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <Square className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </TableCell>
+
+                      {/* Name + Avatar Badge */}
+                      <TableCell className="px-3">
+                        <div className="flex items-center gap-2">
+                          <AvatarInitial name={creator.name} />
+                          <span className="font-medium text-foreground truncate">
+                            {creator.name}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell className="px-3">
+                        <StatusBadge status={creator.status} />
+                      </TableCell>
+
+                      {/* Platform */}
+                      <TableCell className="px-3">
+                        <PlatformBadge platform={creator.platform} />
+                      </TableCell>
+
+                      {/* Email */}
+                      <TableCell className="px-3 text-muted-foreground font-mono text-[11px] truncate">
+                        {creator.email}
+                      </TableCell>
+
+                      {/* Country */}
+                      <TableCell className="px-3 text-muted-foreground text-xs">
+                        {creator.country || '—'}
+                      </TableCell>
+
+                      {/* Followers */}
+                      <TableCell className="px-3 font-mono text-xs text-foreground">
+                        {creator.followers ? creator.followers.toLocaleString() : '—'}
+                      </TableCell>
+
+                      {/* Views */}
+                      <TableCell className="px-3 font-mono text-xs text-foreground">
+                        {creator.views ? creator.views.toLocaleString() : '—'}
+                      </TableCell>
+
+                      {/* Engagement */}
+                      <TableCell className="px-3 text-xs text-muted-foreground">
+                        {creator.engagementRate || '—'}
+                      </TableCell>
+
+                      {/* Est. Cost */}
+                      <TableCell className="px-3 font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        {creator.estCost ? `$${creator.estCost.toLocaleString()}` : '—'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+
+            {/* Calculations Summary Footer */}
+            <TableFooter className="bg-muted/40 font-mono text-xs border-t border-border/60">
+              <TableRow>
+                <TableCell className="px-3 text-center text-muted-foreground">Σ</TableCell>
+                <TableCell className="px-3 text-muted-foreground">{summary.count} creators</TableCell>
+                <TableCell className="px-3"></TableCell>
+                <TableCell className="px-3"></TableCell>
+                <TableCell className="px-3"></TableCell>
+                <TableCell className="px-3"></TableCell>
+                <TableCell className="px-3 text-foreground font-semibold">
+                  {summary.totalFollowers > 0 ? summary.totalFollowers.toLocaleString() : '—'}
+                </TableCell>
+                <TableCell className="px-3 text-foreground font-semibold">
+                  {summary.totalViews > 0 ? summary.totalViews.toLocaleString() : '—'}
+                </TableCell>
+                <TableCell className="px-3"></TableCell>
+                <TableCell className="px-3 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {summary.avgCost > 0 ? `Avg $${summary.avgCost.toLocaleString()}` : '—'}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
       </div>
 
-      {/* Floating Bulk Actions Bar (matches Notion/Airtable UX) */}
+      {/* Floating Bulk Actions Bar */}
       {selectedIds.size > 0 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-[#171a22] border border-[#2d3240] rounded-xl shadow-2xl flex items-center gap-4 text-xs z-30 animate-in fade-in slide-in-from-bottom-2">
-          <span className="font-medium text-pink-400">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-card border border-border shadow-xl rounded-xl flex items-center gap-4 text-xs z-30 animate-in fade-in slide-in-from-bottom-2">
+          <Badge variant="default" className="font-medium">
             {selectedIds.size} creator{selectedIds.size > 1 ? 's' : ''} selected
-          </span>
+          </Badge>
 
-          <div className="h-4 w-px bg-slate-700" />
+          <div className="h-4 w-px bg-border" />
 
           {/* Quick status change */}
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Set Status:</span>
-            <button
+            <span className="text-muted-foreground">Set Status:</span>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => handleBatchStatus('in_outreach')}
-              className="px-2 py-1 bg-blue-950/40 text-blue-400 border border-blue-800/40 rounded hover:bg-blue-900/40"
+              className="h-7 text-xs"
             >
               Outreach
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => handleBatchStatus('contracted')}
-              className="px-2 py-1 bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 rounded hover:bg-emerald-900/40"
+              className="h-7 text-xs"
             >
               Contracted
-            </button>
+            </Button>
           </div>
 
-          <div className="h-4 w-px bg-slate-700" />
+          <div className="h-4 w-px bg-border" />
 
-          <button
+          <Button
             type="button"
+            variant="destructive"
+            size="sm"
             onClick={handleBatchDelete}
-            className="flex items-center gap-1 text-rose-400 hover:text-rose-300 font-medium"
+            className="h-7 text-xs flex items-center gap-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Delete</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setSelectedIds(new Set())}
-            className="text-slate-400 hover:text-slate-200 text-[11px]"
+            className="h-7 text-xs text-muted-foreground"
           >
             Deselect
-          </button>
+          </Button>
         </div>
       )}
 
