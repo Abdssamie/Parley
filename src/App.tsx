@@ -8,23 +8,27 @@ import { Separator } from './components/ui/separator'
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
+  BreadcrumbSeparator,
 } from './components/ui/breadcrumb'
 import { Button } from './components/ui/button'
 import { CreatorsView } from './components/crm/creators/CreatorsView'
 import { CampaignsView } from './components/crm/campaigns/CampaignsView'
+import { DashboardOverview } from './components/DashboardOverview'
+import { NewCampaignModal } from './components/crm/campaigns/NewCampaignModal'
 import { PipelineBoard } from './components/PipelineBoard'
 import { CampaignMetrics } from './components/CampaignMetrics'
 import { ThreadDrawer } from './components/ThreadDrawer'
 import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
 import type { EnrichedThread, PipelineStage } from './types'
-import { Compass, Zap, Plus, Settings as SettingsIcon } from 'lucide-react'
+import { Zap, Plus, Sparkles, Settings as SettingsIcon } from 'lucide-react'
 
 export const App: React.FC = () => {
   // 1. Navigation View State
-  const [currentView, setCurrentView] = useState<AppNavView>('creators')
+  const [currentView, setCurrentView] = useState<AppNavView>('dashboard')
 
   // 2. Convex Realtime Live Subscriptions
   const campaigns = useQuery(api.campaigns.list, {})
@@ -39,6 +43,7 @@ export const App: React.FC = () => {
   const [selectedThreadId, setSelectedThreadId] = useState<Id<'threads'> | null>(null)
   const [isResearchOpen, setIsResearchOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const [isSimulatingGlobal, setIsSimulatingGlobal] = useState(false)
 
   // 4. Selected Thread Details (Live Subscription)
@@ -153,7 +158,7 @@ export const App: React.FC = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Official shadcn Sidebar */}
+      {/* Official shadcn AppSidebar */}
       <AppSidebar
         currentView={currentView}
         onSelectView={(v) => setCurrentView(v)}
@@ -165,17 +170,27 @@ export const App: React.FC = () => {
 
       {/* Main Inset Layout with Claymorphic Theme */}
       <SidebarInset className="bg-background text-foreground flex flex-col h-screen overflow-hidden">
-        {/* Persistent Top Navigation Bar */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4 bg-card/60 backdrop-blur-sm">
+        {/* Persistent Single Top Navigation Bar */}
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4 bg-background/95 backdrop-blur-sm z-20">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
+                <BreadcrumbItem className="hidden sm:inline-flex">
+                  <BreadcrumbLink
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => setCurrentView('dashboard')}
+                  >
+                    Dashboard
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden sm:inline-flex" />
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-sm">
+                    {currentView === 'dashboard' && 'Executive Overview'}
+                    {currentView === 'campaigns' && 'Campaigns'}
                     {currentView === 'creators' && 'Creators CRM'}
-                    {currentView === 'campaigns' && 'Campaigns Manager'}
                     {currentView === 'pipeline' && 'Autonomous Negotiation Pipeline'}
                     {currentView === 'settings' && 'Workspace Settings'}
                   </BreadcrumbPage>
@@ -184,35 +199,55 @@ export const App: React.FC = () => {
             </Breadcrumb>
           </div>
 
-          {currentView === 'pipeline' && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {currentView === 'pipeline' && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGlobalSimulateReply}
+                  disabled={isSimulatingGlobal || threads.length === 0}
+                  className="flex items-center gap-1.5 text-xs shadow-xs"
+                >
+                  <Zap className={`size-3.5 text-amber-500 ${isSimulatingGlobal ? 'animate-spin' : ''}`} />
+                  <span>Simulate Reply</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={() => setIsResearchOpen(true)}
+                  className="flex items-center gap-1.5 text-xs shadow-xs font-medium"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Research & Pitch</span>
+                </Button>
+              </>
+            )}
+
+            {currentView !== 'pipeline' && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleGlobalSimulateReply}
-                disabled={isSimulatingGlobal || threads.length === 0}
+                onClick={() => setIsResearchOpen(true)}
                 className="flex items-center gap-1.5 text-xs shadow-xs"
               >
-                <Zap className={`w-3.5 h-3.5 text-amber-500 ${isSimulatingGlobal ? 'animate-spin' : ''}`} />
-                <span>Simulate Creator Reply</span>
+                <Sparkles className="size-3.5 text-primary" />
+                <span>AI Research & Pitch</span>
               </Button>
-
-              <Button
-                size="sm"
-                onClick={() => setIsResearchOpen(true)}
-                className="flex items-center gap-1.5 text-xs shadow-xs font-medium"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Research & Pitch</span>
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </header>
 
-        {/* Dynamic Main View */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {currentView === 'creators' && (
-            <CreatorsView onLaunchOutreach={handleLaunchOutreachForCreator} />
+        {/* Dynamic Main View with Natural Page Padding & Scrolling */}
+        <main className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6">
+          {currentView === 'dashboard' && (
+            <DashboardOverview
+              onNavigate={(v) => setCurrentView(v)}
+              onOpenResearch={() => setIsResearchOpen(true)}
+              onOpenNewCampaign={() => setIsNewCampaignOpen(true)}
+              onOpenNewCreator={() => setCurrentView('creators')}
+              onSelectCampaign={() => setCurrentView('pipeline')}
+            />
           )}
 
           {currentView === 'campaigns' && (
@@ -223,23 +258,12 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentView === 'pipeline' && (
-            <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 space-y-6">
-              {/* Pipeline Header */}
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
-                <div>
-                  <h1 className="text-lg font-bold tracking-tight flex items-center gap-2 text-foreground">
-                    <Compass className="w-5 h-5 text-primary" />
-                    <span>Autonomous Sponsorship Pipeline</span>
-                  </h1>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Powered by <span className="text-primary font-medium">@convex-dev/agent</span> +{' '}
-                    <span className="font-medium">Firecrawl</span> +{' '}
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">AgentMail</span>
-                  </p>
-                </div>
-              </div>
+          {currentView === 'creators' && (
+            <CreatorsView onLaunchOutreach={handleLaunchOutreachForCreator} />
+          )}
 
+          {currentView === 'pipeline' && (
+            <div className="space-y-6">
               {/* Campaign Metrics Overview */}
               <CampaignMetrics campaign={activeCampaign} metrics={metrics ?? null} />
 
@@ -261,12 +285,12 @@ export const App: React.FC = () => {
           )}
 
           {currentView === 'settings' && (
-            <div className="p-8 space-y-4 max-w-2xl text-xs">
+            <div className="space-y-4 max-w-2xl">
               <div className="flex items-center gap-2">
-                <SettingsIcon className="w-5 h-5 text-primary" />
+                <SettingsIcon className="size-5 text-primary" />
                 <h2 className="text-base font-bold text-foreground">Workspace Settings</h2>
               </div>
-              <p className="text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Manage campaign target niche, deliverables, allocated budget, and autonomous negotiation parameters.
               </p>
               <Button
@@ -315,6 +339,12 @@ export const App: React.FC = () => {
             deliverableRequirements: params.deliverableRequirements,
           })
         }}
+      />
+
+      {/* New Campaign Modal for Dashboard quick action */}
+      <NewCampaignModal
+        isOpen={isNewCampaignOpen}
+        onClose={() => setIsNewCampaignOpen(false)}
       />
     </SidebarProvider>
   )

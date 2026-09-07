@@ -68,7 +68,7 @@ export const CampaignSettingsModal: React.FC<CampaignSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && !saving && onClose()}>
-      <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1 text-indigo-600 dark:text-indigo-400">
             <Settings className="h-5 w-5" />

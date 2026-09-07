@@ -108,9 +108,9 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col bg-slate-50 dark:bg-slate-950">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col bg-background">
         {/* Drawer Header */}
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="sticky top-0 z-20 border-b border-border bg-card p-6">
           <SheetHeader className="space-y-1">
             <div className="flex items-center justify-between">
               <Badge variant="outline" className="capitalize text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">

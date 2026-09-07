@@ -1,67 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
-  :root {
-    --background: 220 20% 98%;
-    --foreground: 224 71% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14% 94%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14% 94%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
-    --ring: 243 75% 59%;
-    --radius: 0.625rem;
-  }
-
-  .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 20% 98%;
-    --card: 224 71% 5%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71% 5%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 215 27.9% 14%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 14%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 14%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 14%;
-    --input: 215 27.9% 14%;
-    --ring: 243 75% 59%;
+  * {
+    border-color: var(--border);
   }
   body {
+    margin: 0;
+    font-family: var(--font-sans), 'Poppins', sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
     letter-spacing: var(--tracking-normal);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  -webkit-font-smoothing: antialiased;
-}
 
 @theme inline {
-  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-sans: 'Poppins', sans-serif;
   --font-mono: Roboto Mono, monospace;
   --font-serif: Lora, serif;
   --radius: 1.25rem;
@@ -162,7 +120,7 @@ body {
   --sidebar-accent-foreground: oklch(0.3729 0.0306 259.7328);
   --sidebar-border: oklch(0.8687 0.0043 56.3660);
   --sidebar-ring: oklch(0.5854 0.2041 277.1173);
-  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-sans: 'Poppins', sans-serif;
   --font-serif: Lora, serif;
   --font-mono: Roboto Mono, monospace;
   --shadow-color: hsl(240 4% 60%);
@@ -218,7 +176,7 @@ body {
   --sidebar-accent-foreground: oklch(0.8717 0.0093 258.3382);
   --sidebar-border: oklch(0.3359 0.0077 59.4197);
   --sidebar-ring: oklch(0.6801 0.1583 276.9349);
-  --font-sans: Plus Jakarta Sans, sans-serif;
+  --font-sans: 'Poppins', sans-serif;
   --font-serif: Lora, serif;
   --font-mono: Roboto Mono, monospace;
   --shadow-color: hsl(0 0% 0%);
