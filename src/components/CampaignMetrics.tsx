@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 interface CampaignMetricsProps {
   campaign: {
     title: string
-    budgetCap: number
+    budget?: number
     targetNiche: string
     deliverableRequirements: string
     status: string
@@ -27,7 +27,7 @@ interface CampaignMetricsProps {
 }
 
 export const CampaignMetrics: React.FC<CampaignMetricsProps> = ({ campaign, metrics }) => {
-  const budgetCap = campaign?.budgetCap ?? 2000
+  const budget = campaign?.budget ?? 2000
   const committedSpend = metrics?.totalCommittedSpend ?? 0
   const pendingApprovals = metrics?.pendingApprovals ?? 0
   const totalInPipeline = metrics?.totalThreads ?? 0
@@ -54,9 +54,9 @@ export const CampaignMetrics: React.FC<CampaignMetricsProps> = ({ campaign, metr
 
         <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3.5 rounded-xl border border-white/10">
           <div className="text-right">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-slate-300">Target Budget Cap</div>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-slate-300">Campaign Budget</div>
             <div className="text-xl font-bold text-emerald-400">
-              ${budgetCap.toLocaleString()} <span className="text-xs font-normal text-slate-300">/ creator</span>
+              ${budget.toLocaleString()} <span className="text-xs font-normal text-slate-300">allocated</span>
             </div>
           </div>
           <div className="h-8 w-px bg-white/20"></div>

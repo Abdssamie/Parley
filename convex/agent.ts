@@ -215,7 +215,7 @@ export const processInboundWithAgent = action({
       throw new Error("Thread, creator, or campaign not found");
     }
 
-    const senderEmail = args.senderAddress || thread.creator.contactEmail;
+    const senderEmail = args.senderAddress || thread.creator.email;
 
     // 2. Record Inbound Message
     await ctx.runMutation(api.messages.addMessage, {
@@ -248,16 +248,16 @@ ${args.incomingBody}
 
 Context:
 - Campaign: "${thread.campaign.title}"
-- Budget Cap: $${thread.campaign.budgetCap} USD
+- Budget Cap: $${thread.campaign.budget} ${thread.campaign.currency}
 - Deliverable Requirements: "${thread.campaign.deliverableRequirements}"
 - Current Thread ID: "${thread._id}"
-- Creator Email: "${thread.creator.contactEmail}"
+- Creator Email: "${thread.creator.email}"
 - AgentMail Thread ID: "${thread.agentMailThreadId}"
 - Previous Proposed Fee: $${thread.proposedFee} USD
 
 Analyze the incoming message.
-- If creator demands a fee > $${thread.campaign.budgetCap}, draft a polite counter-offer and call flagForApproval.
-- If creator accepts or proposes a rate <= $${thread.campaign.budgetCap}, call sendEmail to confirm and updateStage to "accepted" (or "negotiating" if finalizing details).
+- If creator demands a fee > $${thread.campaign.budget}, draft a polite counter-offer and call flagForApproval.
+- If creator accepts or proposes a rate <= $${thread.campaign.budget}, call sendEmail to confirm and updateStage to "accepted" (or "negotiating" if finalizing details).
 - If creator declines, send polite sign-off via sendEmail and updateStage to "declined".`;
 
     const result = await parleyNegotiator.generateText(
@@ -270,7 +270,7 @@ Analyze the incoming message.
     if (!result.toolCalls || result.toolCalls.length === 0) {
       const analysis = await analyzeAndDraftNegotiation({
         campaignTitle: thread.campaign.title,
-        budgetCap: thread.campaign.budgetCap,
+        budget: thread.campaign.budget,
         deliverableRequirements: thread.campaign.deliverableRequirements,
         creatorName: thread.creator.name,
         incomingMessage: args.incomingBody,
@@ -285,7 +285,7 @@ Analyze the incoming message.
         });
       } else {
         await sendAgentMail({
-          to: thread.creator.contactEmail,
+          to: thread.creator.email,
           subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
           body: analysis.draftReply,
           threadId: thread.agentMailThreadId,

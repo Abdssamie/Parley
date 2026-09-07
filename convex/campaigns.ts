@@ -2,9 +2,41 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("campaigns").order("desc").collect();
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("planning"),
+        v.literal("paused"),
+        v.literal("completed")
+      )
+    ),
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let campaigns = args.status
+      ? await ctx.db
+          .query("campaigns")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .order("desc")
+          .take(100)
+      : await ctx.db
+          .query("campaigns")
+          .withIndex("by_created_at")
+          .order("desc")
+          .take(100);
+
+    if (args.search) {
+      const q = args.search.toLowerCase();
+      campaigns = campaigns.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.brief.toLowerCase().includes(q) ||
+          c.targetNiche.toLowerCase().includes(q)
+      );
+    }
+
+    return campaigns;
   },
 });
 
@@ -18,17 +50,33 @@ export const get = query({
 export const create = mutation({
   args: {
     title: v.string(),
-    budgetCap: v.number(),
+    budget: v.number(),
+    currency: v.string(),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    brief: v.string(),
     targetNiche: v.string(),
     deliverableRequirements: v.string(),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("planning"),
+        v.literal("paused"),
+        v.literal("completed")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const id = await ctx.db.insert("campaigns", {
       title: args.title,
-      budgetCap: args.budgetCap,
+      budget: args.budget,
+      currency: args.currency,
+      startDate: args.startDate,
+      endDate: args.endDate,
+      brief: args.brief,
       targetNiche: args.targetNiche,
       deliverableRequirements: args.deliverableRequirements,
-      status: "active",
+      status: args.status ?? "active",
       createdAt: Date.now(),
     });
     return id;
@@ -39,16 +87,54 @@ export const update = mutation({
   args: {
     id: v.id("campaigns"),
     title: v.optional(v.string()),
-    budgetCap: v.optional(v.number()),
+    budget: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    brief: v.optional(v.string()),
     targetNiche: v.optional(v.string()),
     deliverableRequirements: v.optional(v.string()),
     status: v.optional(
-      v.union(v.literal("active"), v.literal("paused"), v.literal("completed"))
+      v.union(
+        v.literal("active"),
+        v.literal("planning"),
+        v.literal("paused"),
+        v.literal("completed")
+      )
     ),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== undefined)
+    );
+    await ctx.db.patch(id, cleanUpdates);
+    return id;
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("campaigns") },
+  handler: async (ctx, args) => {
+    // Delete associated threads and messages
+    const threads = await ctx.db
+      .query("threads")
+      .withIndex("by_campaign", (q) => q.eq("campaignId", args.id))
+      .collect();
+
+    for (const thread of threads) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_thread", (q) => q.eq("threadId", thread._id))
+        .collect();
+      for (const msg of messages) {
+        await ctx.db.delete(msg._id);
+      }
+      await ctx.db.delete(thread._id);
+    }
+
+    await ctx.db.delete(args.id);
+    return { success: true };
   },
 });
 

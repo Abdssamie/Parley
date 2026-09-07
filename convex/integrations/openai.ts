@@ -12,7 +12,7 @@ export interface NegotiationAnalysis {
 
 export async function analyzeAndDraftNegotiation(params: {
   campaignTitle: string;
-  budgetCap: number;
+  budget: number;
   deliverableRequirements: string;
   creatorName: string;
   incomingMessage: string;
@@ -25,7 +25,7 @@ export async function analyzeAndDraftNegotiation(params: {
       const prompt = `You are Parley, an autonomous sponsorship negotiator representing a marketing team.
 Campaign: "${params.campaignTitle}"
 Deliverable Requirements: "${params.deliverableRequirements}"
-Maximum Budget Cap: $${params.budgetCap} USD
+Campaign Budget: $${params.budget} USD
 Current Creator Name: "${params.creatorName}"
 Previous Proposed Fee: $${params.previousProposedFee} USD
 
@@ -36,9 +36,9 @@ ${params.incomingMessage}
 
 Analyze the creator's message.
 1. Extract their proposed fee as an integer number (in USD). If not mentioned, estimate or retain previous.
-2. Determine if it is within our $${params.budgetCap} budget.
-3. If they ask more than $${params.budgetCap}, draft a polite counter-offer capped at $${params.budgetCap} or ask for revised deliverables, and set needsApproval=true.
-4. If they accept or offer <= $${params.budgetCap}, set needsApproval=false and draft a warm confirmation.
+2. Determine if it is within our $${params.budget} budget.
+3. If they ask more than $${params.budget}, draft a polite counter-offer aligned with $${params.budget} or ask for revised deliverables, and set needsApproval=true.
+4. If they accept or offer <= $${params.budget}, set needsApproval=false and draft a warm confirmation.
 5. If they strictly decline, set recommendedStage="declined".
 
 Respond ONLY with valid JSON in this structure:
@@ -103,16 +103,16 @@ Respond ONLY with valid JSON in this structure:
   if (lower.includes("sounds great") || lower.includes("deal") || lower.includes("send the contract") || lower.includes("happy to proceed")) {
     return {
       extractedIntent: "agreement",
-      proposedFee: Math.min(parsedFee, params.budgetCap),
+      proposedFee: Math.min(parsedFee, params.budget),
       withinBudget: true,
       needsApproval: false,
       recommendedStage: "accepted",
-      draftReply: `Fantastic, ${params.creatorName}! We're thrilled to partner on ${params.campaignTitle}. I have locked in the agreed fee of $${Math.min(parsedFee, params.budgetCap).toLocaleString()} for ${params.deliverableRequirements}. Our legal team will dispatch the agreement shortly.`,
+      draftReply: `Fantastic, ${params.creatorName}! We're thrilled to partner on ${params.campaignTitle}. I have locked in the agreed fee of $${Math.min(parsedFee, params.budget).toLocaleString()} for ${params.deliverableRequirements}. Our legal team will dispatch the agreement shortly.`,
       reasoning: "Creator accepted the proposal within budget parameters.",
     };
   }
 
-  const exceedsBudget = parsedFee > params.budgetCap;
+  const exceedsBudget = parsedFee > params.budget;
   if (exceedsBudget) {
     return {
       extractedIntent: "rate_counter_exceeds_budget",
@@ -120,8 +120,8 @@ Respond ONLY with valid JSON in this structure:
       withinBudget: false,
       needsApproval: true,
       recommendedStage: "negotiating",
-      draftReply: `Hi ${params.creatorName}, thanks for getting back to us. While $${parsedFee.toLocaleString()} is above our cap of $${params.budgetCap.toLocaleString()} for this specific milestone, we'd love to make this work. Would you consider $${params.budgetCap.toLocaleString()} or alternatively adjusting deliverables to 1 dedicated segment? Let us know what you think!`,
-      reasoning: `Creator requested $${parsedFee.toLocaleString()}, which exceeds campaign cap of $${params.budgetCap.toLocaleString()}. Autonomous counter drafted and flagged for human approval.`,
+      draftReply: `Hi ${params.creatorName}, thanks for getting back to us. While $${parsedFee.toLocaleString()} is above our budget of $${params.budget.toLocaleString()} for this specific milestone, we'd love to make this work. Would you consider $${params.budget.toLocaleString()} or alternatively adjusting deliverables to 1 dedicated segment? Let us know what you think!`,
+      reasoning: `Creator requested $${parsedFee.toLocaleString()}, which exceeds campaign budget of $${params.budget.toLocaleString()}. Autonomous counter drafted and flagged for human approval.`,
     };
   }
 
@@ -132,6 +132,6 @@ Respond ONLY with valid JSON in this structure:
     needsApproval: false,
     recommendedStage: "negotiating",
     draftReply: `Hi ${params.creatorName}, thanks for your rate card! $${parsedFee.toLocaleString()} fits nicely within our parameters for ${params.campaignTitle}. Could you confirm your earliest publication date for ${params.deliverableRequirements}?`,
-    reasoning: `Creator proposed $${parsedFee.toLocaleString()}, which is within the $${params.budgetCap.toLocaleString()} cap. Generated confirmation inquiry.`,
+    reasoning: `Creator proposed $${parsedFee.toLocaleString()}, which is within the $${params.budget.toLocaleString()} budget. Generated confirmation inquiry.`,
   };
 }

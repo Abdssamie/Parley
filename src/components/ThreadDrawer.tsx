@@ -63,7 +63,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   const creator = thread.creator
   const campaign = thread.campaign
   const messages = thread.messages || []
-  const budgetCap = campaign?.budgetCap ?? 2000
+  const budget = campaign?.budget ?? 2000
 
   const handleApprove = async () => {
     setIsSubmitting(true)
@@ -127,7 +127,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
               </span>
             </SheetTitle>
             <SheetDescription className="text-xs text-slate-500 dark:text-slate-400">
-              {creator?.contactEmail} • Niche: {creator?.audienceNiche}
+              {creator?.email} • Niche: {creator?.audienceNiche}
             </SheetDescription>
           </SheetHeader>
 
@@ -200,7 +200,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                     <span>Autonomous Counter-Offer Requires Human Approval</span>
                   </div>
                   <p className="mt-1.5 text-xs text-red-900/80 dark:text-red-200 leading-relaxed">
-                    Creator requested ${thread.proposedFee.toLocaleString()} (Campaign budget cap: ${budgetCap.toLocaleString()}).
+                    Creator requested ${thread.proposedFee.toLocaleString()} (Campaign budget: ${budget.toLocaleString()}).
                     OpenAI generated the following counter-offer:
                   </p>
                   <div className="mt-3 rounded-lg bg-white p-3 text-xs text-slate-800 shadow-sm border border-red-200 dark:bg-slate-900 dark:text-slate-200 dark:border-red-950">
@@ -221,7 +221,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                       size="sm"
                       onClick={() => {
                         setManualBody(thread.draftCounterOffer || '')
-                        setManualFee(budgetCap)
+                        setManualFee(budget)
                         setActiveTab('override')
                       }}
                       className="text-xs h-8"

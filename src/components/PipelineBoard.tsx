@@ -114,8 +114,8 @@ export const PipelineBoard: React.FC<PipelineBoardProps> = ({
               ) : (
                 stageThreads.map((thread) => {
                   const creator = thread.creator
-                  const budgetCap = thread.campaign?.budgetCap ?? 2000
-                  const isOverBudget = thread.proposedFee > budgetCap
+                  const budget = thread.campaign?.budget ?? 2000
+                  const isOverBudget = thread.proposedFee > budget
 
                   return (
                     <Card

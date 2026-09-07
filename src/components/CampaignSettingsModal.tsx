@@ -18,18 +18,18 @@ interface CampaignSettingsModalProps {
   campaign: {
     _id: Id<'campaigns'>
     title: string
-    budgetCap: number
+    budget: number
     targetNiche: string
     deliverableRequirements: string
-    status: 'active' | 'paused' | 'completed'
+    status: 'active' | 'planning' | 'paused' | 'completed'
   } | null
   onUpdateCampaign: (params: {
     id: Id<'campaigns'>
     title?: string
-    budgetCap?: number
+    budget?: number
     targetNiche?: string
     deliverableRequirements?: string
-    status?: 'active' | 'paused' | 'completed'
+    status?: 'active' | 'planning' | 'paused' | 'completed'
   }) => Promise<void>
 }
 
@@ -40,10 +40,10 @@ export const CampaignSettingsModal: React.FC<CampaignSettingsModalProps> = ({
   onUpdateCampaign,
 }) => {
   const [title, setTitle] = useState(campaign?.title || '')
-  const [budgetCap, setBudgetCap] = useState(campaign?.budgetCap || 2000)
+  const [budget, setBudget] = useState(campaign?.budget || 2000)
   const [targetNiche, setTargetNiche] = useState(campaign?.targetNiche || '')
   const [deliverables, setDeliverables] = useState(campaign?.deliverableRequirements || '')
-  const [status, setStatus] = useState<'active' | 'paused' | 'completed'>(campaign?.status || 'active')
+  const [status, setStatus] = useState<'active' | 'planning' | 'paused' | 'completed'>(campaign?.status || 'active')
   const [saving, setSaving] = useState(false)
 
   if (!campaign) return null
@@ -55,7 +55,7 @@ export const CampaignSettingsModal: React.FC<CampaignSettingsModalProps> = ({
       await onUpdateCampaign({
         id: campaign._id,
         title,
-        budgetCap: Number(budgetCap),
+        budget: Number(budget),
         targetNiche,
         deliverableRequirements: deliverables,
         status,
@@ -98,13 +98,13 @@ export const CampaignSettingsModal: React.FC<CampaignSettingsModalProps> = ({
             <div className="space-y-1.5">
               <Label htmlFor="campBudget" className="text-xs font-semibold flex items-center gap-1">
                 <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-                Budget Cap / Creator
+                Campaign Budget
               </Label>
               <Input
                 id="campBudget"
                 type="number"
-                value={budgetCap}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBudgetCap(Number(e.target.value))}
+                value={budget}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBudget(Number(e.target.value))}
                 className="h-9 text-xs"
                 required
               />
