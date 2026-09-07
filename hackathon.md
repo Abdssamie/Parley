@@ -12,9 +12,16 @@
 - **Auth:** none
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T15:36:00Z
+- **Last updated:** 2026-09-07T15:41:16Z
 
 ## Log
+
+### 2026-09-07 - fa19d9b
+Overhauled dashboard UI to production shadcn standards with a Claymorphism theme and Poppins typography:
+- Rebuilt persistent workspace sidebar navigation (`src/components/app-sidebar.tsx`, `src/components/ui/sidebar.tsx`) strictly on the official shadcn sidebar baseline with collapsible icon state.
+- Created dedicated Executive Dashboard (`src/components/DashboardOverview.tsx`) centralizing real-time KPI metrics (Total Budget, Active Campaigns, Reach, Average Cost, Committed Spend) and quick action shortcuts.
+- Replaced card layouts on Campaigns (`src/components/crm/campaigns/CampaignsView.tsx`) and Creators (`src/components/crm/creators/CreatorsView.tsx`) with pure data tables supporting inline cell modification directly updating Convex documents (`campaigns.update`, `creators.update`).
+- Eradicated legacy custom UI badges and header elements, migrating modal and drawer surfaces to shadcn Dialog and Sheet primitives (`src/components/crm/campaigns/NewCampaignModal.tsx`, `src/components/crm/creators/CreatorDrawer.tsx`, `src/components/ResearchModal.tsx`, `src/components/CampaignSettingsModal.tsx`).
 
 ### 2026-09-07 - Functional CRM Base (Creators & Campaigns)
 Built a dark-themed Airtable/Attio-style CRM foundational base:
