@@ -12,9 +12,16 @@
 - **Auth:** Better Auth (@convex-dev/better-auth) with session cookies and credential auth
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T18:28:00Z
+- **Last updated:** 2026-09-07T21:30:00Z
 
 ## Log
+
+### 2026-09-07 - Sidebar User Profile & Account Dropdown Menu
+Streamlined dashboard navigation by migrating user account controls from the header to the persistent sidebar footer:
+- Cleaned dashboard top bar (`src/App.tsx`), removing header user badge and sign-out button to maximize focal workspace room for actions and search.
+- Created `NavUser` component (`src/components/nav-user.tsx`) and embedded it into `SidebarFooter` (`src/components/app-sidebar.tsx`), replacing the static live sync pill.
+- Integrated profile trigger displaying user avatar (initials fallback), name, email, and vertical ellipsis menu trigger.
+- Implemented popout Radix dropdown menu featuring user identity summary, quick navigation items (Account, Billing, Organization), and authenticated Sign Out action invoking Better Auth (`authClient.signOut()`) with redirect to `/sign-in`.
 
 ### 2026-09-07 - Better Auth Component, Dedicated Landing & Auth Pages, Protected Dashboard Gate
 Integrated `@convex-dev/better-auth` with Convex components and established secure route protection:

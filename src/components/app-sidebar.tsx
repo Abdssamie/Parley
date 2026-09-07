@@ -6,9 +6,9 @@ import {
   Settings,
   Plus,
   Compass,
-  Radio,
   LayoutDashboard,
 } from "lucide-react"
+import { NavUser } from "./nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -165,22 +165,9 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* 3. Footer: Connection status & Rail */}
+      {/* 3. Footer: Account / Profile menu */}
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="sm"
-              className="text-muted-foreground hover:text-foreground cursor-default"
-              tooltip="Convex Reactive Live WebSocket Sync"
-            >
-              <Radio className="size-3.5 text-emerald-500 animate-pulse shrink-0" />
-              <span className="text-xs truncate font-mono group-data-[collapsible=icon]:hidden">
-                Convex Live Sync
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <NavUser onSelectView={onSelectView} />
       </SidebarFooter>
 
       <SidebarRail />

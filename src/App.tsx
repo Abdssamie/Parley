@@ -25,7 +25,6 @@ import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
 import type { EnrichedThread, PipelineStage } from './types'
 import { Zap, Plus, Sparkles, Settings as SettingsIcon } from 'lucide-react'
-import { UserMenu } from './components/auth/UserMenu'
 
 export const App: React.FC = () => {
   // 1. Navigation View State
@@ -236,9 +235,6 @@ export const App: React.FC = () => {
                 <span>AI Research & Pitch</span>
               </Button>
             )}
-
-            <Separator orientation="vertical" className="h-4 mx-1" />
-            <UserMenu />
           </div>
         </header>
 
