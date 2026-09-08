@@ -94,4 +94,23 @@ export default defineSchema({
     subject: v.string(),
     rawBody: v.string(),
   }).index("by_thread", ["threadId"]),
+
+  emailTemplates: defineTable({
+    name: v.string(),
+    subject: v.string(),
+    body: v.string(),
+    category: v.union(
+      v.literal("pitch"),
+      v.literal("negotiation"),
+      v.literal("followup"),
+      v.literal("contract")
+    ),
+    status: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
+    description: v.optional(v.string()),
+    isDefault: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_created_at", ["createdAt"]),
 });

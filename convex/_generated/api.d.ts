@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as campaigns from "../campaigns.js";
 import type * as creators from "../creators.js";
 import type * as email from "../email.js";
+import type * as emailTemplates from "../emailTemplates.js";
 import type * as firecrawl from "../firecrawl.js";
 import type * as http from "../http.js";
 import type * as integrations_agentmail from "../integrations/agentmail.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   campaigns: typeof campaigns;
   creators: typeof creators;
   email: typeof email;
+  emailTemplates: typeof emailTemplates;
   firecrawl: typeof firecrawl;
   http: typeof http;
   "integrations/agentmail": typeof integrations_agentmail;

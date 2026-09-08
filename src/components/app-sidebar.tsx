@@ -2,11 +2,12 @@ import * as React from "react"
 import {
   Users,
   Target,
-  Sparkles,
+  Bot,
   Settings,
   Plus,
   Compass,
   LayoutDashboard,
+  Mail,
 } from "lucide-react"
 import { NavUser } from "./nav-user"
 import {
@@ -24,7 +25,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-export type AppNavView = "dashboard" | "campaigns" | "creators" | "pipeline" | "settings"
+export type AppNavView = "dashboard" | "campaigns" | "creators" | "pipeline" | "templates" | "settings"
 
 export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   currentView: AppNavView
@@ -32,6 +33,7 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   campaignsCount?: number
   creatorsCount?: number
   threadsCount?: number
+  templatesCount?: number
   onOpenResearch?: () => void
 }
 
@@ -41,6 +43,7 @@ export function AppSidebar({
   campaignsCount = 0,
   creatorsCount = 0,
   threadsCount = 0,
+  templatesCount = 0,
   onOpenResearch,
   ...props
 }: AppSidebarProps) {
@@ -55,7 +58,7 @@ export function AppSidebar({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground select-none"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                <Sparkles className="size-4" />
+                <Bot className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold tracking-tight">Parley</span>
@@ -127,6 +130,21 @@ export function AppSidebar({
                 </SidebarMenuButton>
                 {threadsCount > 0 && (
                   <SidebarMenuBadge>{threadsCount}</SidebarMenuBadge>
+                )}
+              </SidebarMenuItem>
+
+              {/* Email Templates */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentView === "templates"}
+                  onClick={() => onSelectView("templates")}
+                  tooltip="Email Templates"
+                >
+                  <Mail className="size-4 text-primary" />
+                  <span>Email Templates</span>
+                </SidebarMenuButton>
+                {templatesCount > 0 && (
+                  <SidebarMenuBadge>{templatesCount}</SidebarMenuBadge>
                 )}
               </SidebarMenuItem>
             </SidebarMenu>

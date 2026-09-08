@@ -12,9 +12,28 @@
 - **Auth:** Better Auth (@convex-dev/better-auth) with session cookies and credential auth
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-07T21:30:00Z
+- **Last updated:** 2026-09-08T16:55:00Z
 
 ## Log
+
+### 2026-09-08 - Brevo-Style Dynamic Email Templates, CodeMirror Editor & Full Route Architecture
+Implemented full-stack dynamic email template system with live data interpolation, dedicated routing, and developer-grade CodeMirror editing:
+- **Backend (Convex):**
+  - Added `emailTemplates` table in `convex/schema.ts` with indexes for workspace lookups by status and category.
+  - Implemented CRUD and seeding in `convex/emailTemplates.ts` (`list`, `get`, `create`, `update`, `toggleStatus`, `remove`, `seedDefaults`).
+  - Seeded 4 standard production templates (Pitch & Initial Outreach, Creative Deliverables Brief, Contract & Scope Confirmation, Follow-up).
+- **Template Engine & Variable System (`src/lib/template-engine.ts`, `src/components/templates/VariablePicker.tsx`):**
+  - Interpolation engine supporting tokens: creator fields (`name`, `handle`, `platform`, `niche`, `email`, `rate`), campaign fields (`title`, `budget`, `deliverables`, `niche`), and sender metadata (`name`, `email`, `brand`).
+  - Single header `{ } Insert Variable` picker inserting dynamic tags at cursor position without UI clutter or duplicate controls.
+- **Robust Code Editor (`src/components/templates/FullPageTemplateEditor.tsx`):**
+  - Integrated `@uiw/react-codemirror` with `@codemirror/lang-html` and `@codemirror/theme-one-dark`.
+  - Replaced nested rounded cards and plain HTML `<textarea>` with full-canvas code editor chrome featuring line numbers, HTML/token syntax highlighting, status bar (token count, UTF-8, char count), and cursor-position insertion via `EditorView.dispatch`.
+  - Removed subject field redundancy from the content canvas, keeping subject configuration purely in the template settings overview.
+- **Routing & Navigation Architecture (`src/main.tsx`, `src/App.tsx`, `src/pages/TemplatePage.tsx`):**
+  - Registered explicit TanStack router routes: `/dashboard`, `/campaigns`, `/creators`, `/pipeline`, `/templates`, `/templates/new`, and `/templates/$templateId`.
+  - Replaced nested conditionals with an idiomatic `switch (view)` statement in `src/App.tsx`.
+  - Fixed back button navigation so exiting template editing cleanly returns to `/templates` instead of falling back to `/`.
+  - Eradicated sparkle icons in navigation and action toolbars in favor of purposeful `Bot` and `Zap` icons.
 
 ### 2026-09-07 - Sidebar User Profile & Account Dropdown Menu
 Streamlined dashboard navigation by migrating user account controls from the header to the persistent sidebar footer:

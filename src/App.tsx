@@ -23,12 +23,42 @@ import { CampaignMetrics } from './components/CampaignMetrics'
 import { ThreadDrawer } from './components/ThreadDrawer'
 import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
+import { TemplatesView } from './components/templates/TemplatesView'
 import type { EnrichedThread, PipelineStage } from './types'
-import { Zap, Plus, Sparkles, Settings as SettingsIcon } from 'lucide-react'
+import { Zap, Plus, Bot, Settings as SettingsIcon } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 
-export const App: React.FC = () => {
+export interface AppProps {
+  initialView?: AppNavView
+}
+
+export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   // 1. Navigation View State
-  const [currentView, setCurrentView] = useState<AppNavView>('dashboard')
+  const [currentView, setCurrentView] = useState<AppNavView>(initialView)
+  const navigate = useNavigate()
+
+  const handleSelectView = (view: AppNavView) => {
+    setCurrentView(view)
+    switch (view) {
+      case 'dashboard':
+        void navigate({ to: '/dashboard' })
+        break
+      case 'campaigns':
+        void navigate({ to: '/campaigns' })
+        break
+      case 'creators':
+        void navigate({ to: '/creators' })
+        break
+      case 'pipeline':
+        void navigate({ to: '/pipeline' })
+        break
+      case 'templates':
+        void navigate({ to: '/templates' })
+        break
+      case 'settings':
+        break
+    }
+  }
 
   // 2. Convex Realtime Live Subscriptions
   const campaigns = useQuery(api.campaigns.list, {})
@@ -38,6 +68,7 @@ export const App: React.FC = () => {
 
   const metrics = useQuery(api.campaigns.getMetrics, { campaignId: campaignId ?? undefined })
   const rawThreads = useQuery(api.threads.listByCampaign, { campaignId: campaignId ?? undefined })
+  const emailTemplates = useQuery(api.emailTemplates.list, {})
 
   // 3. Modals and Drawers State
   const [selectedThreadId, setSelectedThreadId] = useState<Id<'threads'> | null>(null)
@@ -161,10 +192,11 @@ export const App: React.FC = () => {
       {/* Official shadcn AppSidebar */}
       <AppSidebar
         currentView={currentView}
-        onSelectView={(v) => setCurrentView(v)}
+        onSelectView={handleSelectView}
         creatorsCount={creators?.length ?? 0}
         campaignsCount={campaigns?.length ?? 0}
         threadsCount={threads.length}
+        templatesCount={emailTemplates?.length ?? 0}
         onOpenResearch={() => setIsResearchOpen(true)}
       />
 
@@ -180,7 +212,7 @@ export const App: React.FC = () => {
                 <BreadcrumbItem className="hidden sm:inline-flex">
                   <BreadcrumbLink
                     className="cursor-pointer hover:text-foreground"
-                    onClick={() => setCurrentView('dashboard')}
+                    onClick={() => handleSelectView('dashboard')}
                   >
                     Dashboard
                   </BreadcrumbLink>
@@ -192,6 +224,7 @@ export const App: React.FC = () => {
                     {currentView === 'campaigns' && 'Campaigns'}
                     {currentView === 'creators' && 'Creators CRM'}
                     {currentView === 'pipeline' && 'Autonomous Negotiation Pipeline'}
+                    {currentView === 'templates' && 'Email Templates'}
                     {currentView === 'settings' && 'Workspace Settings'}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -231,7 +264,7 @@ export const App: React.FC = () => {
                 onClick={() => setIsResearchOpen(true)}
                 className="flex items-center gap-1.5 text-xs shadow-xs"
               >
-                <Sparkles className="size-3.5 text-primary" />
+                <Bot className="size-3.5 text-primary" />
                 <span>AI Research & Pitch</span>
               </Button>
             )}
@@ -282,6 +315,10 @@ export const App: React.FC = () => {
                 />
               </div>
             </div>
+          )}
+
+          {currentView === 'templates' && (
+            <TemplatesView onOpenResearch={() => setIsResearchOpen(true)} />
           )}
 
           {currentView === 'settings' && (

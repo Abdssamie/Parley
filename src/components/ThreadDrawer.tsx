@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import {
   Bot,
   User,
@@ -7,6 +9,7 @@ import {
   CheckCircle,
   ShieldAlert,
   Edit3,
+  FileText,
 } from 'lucide-react'
 import {
   Sheet,
@@ -22,6 +25,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Id } from '../../convex/_generated/dataModel'
 import type { ThreadDetail, PipelineStage } from '../types'
+import { renderTemplate } from '@/lib/template-engine'
+import { VariablePicker } from './templates/VariablePicker'
 
 interface ThreadDrawerProps {
   threadId: Id<'threads'> | null
@@ -57,6 +62,8 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   const [manualFee, setManualFee] = useState<number | undefined>(undefined)
   const [manualStage, setManualStage] = useState<PipelineStage | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const emailTemplates = useQuery(api.emailTemplates.list, {})
 
   if (!thread || !threadId) return null
 
@@ -371,6 +378,39 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                 </p>
               </div>
 
+              {/* Template Pre-population Toolbar */}
+              <div className="flex items-center justify-between p-2 rounded-md bg-muted/40 border border-border/60">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <FileText className="size-3.5 text-primary" />
+                  <span>Email Template:</span>
+                </div>
+                <select
+                  aria-label="Select an email template to populate fields"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const selected = emailTemplates?.find((t) => t._id === e.target.value)
+                    if (selected) {
+                      const context = {
+                        creator: creator ? { ...creator, estCost: manualFee ?? thread.proposedFee ?? creator.estCost } : null,
+                        campaign,
+                        sender: { name: 'Partnerships Team', email: 'team@parley.app' },
+                        brandName: 'Parley',
+                      }
+                      setManualSubject(renderTemplate(selected.subject, context))
+                      setManualBody(renderTemplate(selected.body, context))
+                    }
+                  }}
+                  className="h-8 text-xs rounded-md border border-input bg-background px-2.5 max-w-[220px] truncate cursor-pointer"
+                >
+                  <option value="" disabled>Load from template...</option>
+                  {(emailTemplates || []).map((t) => (
+                    <option key={t._id} value={t._id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="subject" className="text-xs font-semibold">Subject</Label>
                 <Input
@@ -383,14 +423,23 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="body" className="text-xs font-semibold">Email Body</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="body" className="text-xs font-semibold">Email Body</Label>
+                  <VariablePicker
+                    onSelectVariable={(v) => {
+                      setManualBody((prev) => prev + v.tag)
+                    }}
+                    label="Insert Dynamic Field"
+                    size="sm"
+                  />
+                </div>
                 <Textarea
                   id="body"
                   value={manualBody}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManualBody(e.target.value)}
                   rows={6}
                   placeholder="Type your custom email reply to the creator..."
-                  className="text-xs leading-relaxed"
+                  className="text-xs leading-relaxed font-mono"
                   required
                 />
               </div>
