@@ -13,7 +13,7 @@
 
 ---
 
-## ⚡ Overview
+## Overview
 
 Managing creator sponsorships and influencer collaborations is notoriously slow, chaotic, and manual. Partnership managers juggle dozens of fragmented email threads, spreadsheet trackers, media kits, rate negotiations, and onboarding contracts.
 
@@ -27,7 +27,7 @@ Managing creator sponsorships and influencer collaborations is notoriously slow,
 
 ---
 
-## 🏗 System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -82,7 +82,7 @@ flowchart TD
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
 ### 1. Deterministic State Machine & Negotiation Rules Engine
 Parley eliminates runaway AI hallucination by wrapping LLM comprehension in strict, deterministic mathematical guardrails:
@@ -130,7 +130,7 @@ Parley eliminates runaway AI hallucination by wrapping LLM comprehension in stri
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
 |---|---|---|
@@ -147,7 +147,7 @@ Parley eliminates runaway AI hallucination by wrapping LLM comprehension in stri
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 ├── convex/
@@ -194,7 +194,7 @@ Parley eliminates runaway AI hallucination by wrapping LLM comprehension in stri
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 - **Node.js**: `v20.x` or higher
@@ -257,7 +257,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🧪 Seeding & Testing the Negotiation Loop
+## Seeding & Testing the Negotiation Loop
 
 1. **Sign In**: Navigate to `/sign-in` and click **Demo Login** (or create an account).
 2. **Explore the Pipeline**: Click **Pipeline** in the sidebar to view the ReUI Radix Kanban board with active deals.
@@ -277,6 +277,6 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 📜 License
+## License
 
 This project was created for the Convex All Gas Hackathon and is open source under the [MIT License](LICENSE).
