@@ -4,7 +4,7 @@
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Autonomous creator collaboration CRM automating research via Firecrawl, negotiations via OpenAI, and programmatic inboxes via AgentMail with real-time Convex subscriptions.
 - **Live app:** not deployed
-- **Repo:** none
+- **Repo:** https://github.com/Abdssamie/Parley
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://disciplined-greyhound-279.eu-west-1.convex.cloud
 - **Components:** @convex-dev/static-hosting, @convex-dev/agent, @agentmail/convex, @firecrawl/firecrawl-convex, @convex-dev/better-auth
@@ -12,9 +12,31 @@
 - **Auth:** Better Auth (@convex-dev/better-auth) with session cookies and credential auth
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-09T19:54:00Z
+- **Last updated:** 2026-09-10T17:07:32Z
 
 ## Log
+
+### 2026-09-10 - 0d5845f: Deterministic Rules Engine (A/B/C/D), Radix Kanban Workspace & AI Copilot Drafting
+Implemented deterministic negotiation state machine with four-rule budget guardrails, interactive ReUI Radix drag-and-drop Kanban workspace, and OpenAI email copilot:
+- **Deterministic State Machine & Rules Engine (`convex/pipeline.ts`, `convex/integrations/openai.ts`, `convex/schema.ts`):**
+  - Built deterministic decision engine evaluating inbound creator proposals against campaign budget caps:
+    - **Rule A (Green Light):** Quote within budget cap -> auto-accept / confirmation draft, stage transitions to `accepted`, and generates dynamic onboarding agreement link (`https://parley.app/onboard/...`).
+    - **Rule B (Counter-Offer):** Quote > budget cap but <= 125% -> autonomous counter-offer drafted anchored strictly to campaign cap; dispatches immediately in `full_autonomy` mode or pauses for human review in `human_in_the_loop` mode.
+    - **Rule C (Hard Block):** Quote > 125% of budget cap -> triggers human approval gate, halting auto-replies and placing deal in `review_required` stage.
+    - **Rule D (Decline/Ghosted):** Rejection intent or creator inactivity timeout (>5 days) -> moves deal to `declined` or `ghosted`.
+  - Schema extension (`convex/schema.ts`): Added `review_required` and `ghosted` pipeline stages to `threads` table; added `ruleTriggered`, `requestedRate`, `sentimentScore`, `contractLink`, `autonomyMode`, `lastInboundAt`, `proposedDeliverables`, and `timelineConstraint`.
+- **Interactive ReUI Radix Kanban Board (`src/components/ui/kanban.tsx`, `src/components/PipelineBoard.tsx`, `convex/threads.ts`):**
+  - Integrated `@dnd-kit/core` and `@dnd-kit/sortable` with Radix UI primitives for fluid, multi-column deal management across 6 workflow stages (`Discovered`, `Pitched`, `Negotiating`, `Review Required`, `Accepted`, `Declined / Ghosted`).
+  - Column headers display live deal counts and real-time aggregated pipeline dollar values ($).
+  - Optimistic drag-and-drop deal movement synchronized with Convex backend (`api.threads.moveStage`).
+  - High-density deal cards displaying creator avatar, handle, platform, audience reach, agreed deliverables, proposed vs requested rates, sentiment scores, and rule pills (`Rule A (Within Budget)`, `Rule B (Countered)`, `Rule C (Blocked)`).
+- **Copilot AI Email Drafting & Streamlined Thread Drawer (`convex/agent.ts`, `src/components/ThreadDrawer.tsx`):**
+  - Built `draftEmailWithAgent` action in `convex/agent.ts` leveraging OpenAI (`gpt-4o-mini` / `gpt-5.6-sol`) with smart contextual fallbacks.
+  - Redesigned thread drawer with single-click AI prompt chips ("Counter-offer $2,000", "Accept & send onboarding contract", "Ask for media kit & metrics", "Polite pass"), real-time email dispatch via AgentMail, and full message timeline.
+- **Working State Retention & UI Polish (`src/components/ResearchModal.tsx`, `src/components/crm/creators/NewCreatorModal.tsx`, `src/hooks/useTheme.ts`):**
+  - Maintained modal and drawer input persistence across discovery modals, search queries, and full-page template editing.
+  - Added `useTheme.ts` hook for smooth dark/light theme switching adhering strictly to the neutral theme palette.
+  - Convex features: schema, tables, indexes, queries, mutations, actions, scheduled functions, realtime subscriptions (`convex/schema.ts`, `convex/pipeline.ts`, `convex/threads.ts`, `convex/agent.ts`, `convex/integrations/openai.ts`).
 
 ### 2026-09-08 - Brevo-Style Dynamic Email Templates, CodeMirror Editor & Full Route Architecture
 Implemented full-stack dynamic email template system with live data interpolation, dedicated routing, and developer-grade CodeMirror editing:
