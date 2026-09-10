@@ -72,7 +72,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
       <DropdownMenuContent align="start" className="w-80 max-h-96 overflow-y-auto z-50">
         {/* Creator Fields Group */}
         <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold px-2 py-1.5">
-          <Users className="size-3.5 text-blue-500" />
+          <Users className="size-3.5 text-muted-foreground" />
           <span>Creator Data Fields</span>
         </DropdownMenuLabel>
         <DropdownMenuGroup>
@@ -80,17 +80,12 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             <DropdownMenuItem
               key={v.key}
               onClick={() => onSelectVariable(v)}
-              className="cursor-pointer flex flex-col items-start gap-0.5 px-2.5 py-1.5 focus:bg-accent"
+              className="cursor-pointer flex items-center justify-between px-2.5 py-1.5 focus:bg-accent"
             >
-              <div className="flex items-center justify-between w-full">
-                <span className="font-medium text-xs text-foreground">{v.label}</span>
-                <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
-                  {v.tag}
-                </code>
-              </div>
-              <span className="text-[10px] text-muted-foreground line-clamp-1">
-                e.g. {v.example}
-              </span>
+              <span className="font-medium text-xs text-foreground">{v.label}</span>
+              <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
+                {v.tag}
+              </code>
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
@@ -99,7 +94,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
 
         {/* Campaign Fields Group */}
         <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold px-2 py-1.5">
-          <Target className="size-3.5 text-emerald-500" />
+          <Target className="size-3.5 text-muted-foreground" />
           <span>Campaign Data Fields</span>
         </DropdownMenuLabel>
         <DropdownMenuGroup>
@@ -107,17 +102,12 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             <DropdownMenuItem
               key={v.key}
               onClick={() => onSelectVariable(v)}
-              className="cursor-pointer flex flex-col items-start gap-0.5 px-2.5 py-1.5 focus:bg-accent"
+              className="cursor-pointer flex items-center justify-between px-2.5 py-1.5 focus:bg-accent"
             >
-              <div className="flex items-center justify-between w-full">
-                <span className="font-medium text-xs text-foreground">{v.label}</span>
-                <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
-                  {v.tag}
-                </code>
-              </div>
-              <span className="text-[10px] text-muted-foreground line-clamp-1">
-                e.g. {v.example}
-              </span>
+              <span className="font-medium text-xs text-foreground">{v.label}</span>
+              <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
+                {v.tag}
+              </code>
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
@@ -126,7 +116,7 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
 
         {/* Sender / Brand Fields Group */}
         <DropdownMenuLabel className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold px-2 py-1.5">
-          <Building className="size-3.5 text-amber-500" />
+          <Building className="size-3.5 text-muted-foreground" />
           <span>Sender & Brand Fields</span>
         </DropdownMenuLabel>
         <DropdownMenuGroup>
@@ -134,17 +124,12 @@ export const VariablePicker: React.FC<VariablePickerProps> = ({
             <DropdownMenuItem
               key={v.key}
               onClick={() => onSelectVariable(v)}
-              className="cursor-pointer flex flex-col items-start gap-0.5 px-2.5 py-1.5 focus:bg-accent"
+              className="cursor-pointer flex items-center justify-between px-2.5 py-1.5 focus:bg-accent"
             >
-              <div className="flex items-center justify-between w-full">
-                <span className="font-medium text-xs text-foreground">{v.label}</span>
-                <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
-                  {v.tag}
-                </code>
-              </div>
-              <span className="text-[10px] text-muted-foreground line-clamp-1">
-                e.g. {v.example}
-              </span>
+              <span className="font-medium text-xs text-foreground">{v.label}</span>
+              <code className="text-[10px] font-mono bg-muted/80 text-foreground font-semibold px-1.5 py-0.5 rounded">
+                {v.tag}
+              </code>
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>

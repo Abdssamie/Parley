@@ -155,14 +155,14 @@ export const PipelineBoard: React.FC<PipelineBoardProps> = ({
                           )}
                         </div>
 
-                        {/* Firecrawl Scraped Snippet */}
+                        {/* Creator Intelligence Snippet */}
                         {creator?.scrapedSummary && (
                           <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
                             {creator.scrapedSummary}
                           </p>
                         )}
 
-                        {/* Past Sponsors Verified by Firecrawl */}
+                        {/* Past Sponsors Verified */}
                         {creator?.pastSponsors && creator.pastSponsors.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {creator.pastSponsors.slice(0, 3).map((sponsor) => (

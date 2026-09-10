@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   Check,
   Pencil,
+  ChevronDown,
 } from 'lucide-react'
 import { NewCampaignModal } from './NewCampaignModal'
 import {
@@ -34,6 +35,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 
 interface CampaignsViewProps {
   onSelectCampaign?: (campaign: Doc<'campaigns'>) => void
@@ -137,8 +139,10 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
     }
   }
 
-  const handleStatusChange = async (id: Id<'campaigns'>, newStatus: 'active' | 'planning' | 'paused' | 'completed', e: React.ChangeEvent<HTMLSelectElement>) => {
-    e.stopPropagation()
+  const handleStatusChange = async (
+    id: Id<'campaigns'>,
+    newStatus: 'active' | 'planning' | 'paused' | 'completed'
+  ) => {
     await updateCampaign({ id, status: newStatus })
   }
 
@@ -372,30 +376,39 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({ onSelectCampaign }
 
                         {/* Status (Inline Select) */}
                         <TableCell className="py-2.5" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={camp.status}
-                            onChange={(e) =>
-                              handleStatusChange(
-                                camp._id,
-                                e.target.value as 'active' | 'planning' | 'paused' | 'completed',
-                                e
-                              )
-                            }
-                            className={`h-7 text-xs font-semibold rounded-md border px-2 py-0.5 cursor-pointer outline-none transition-colors ${
-                              camp.status === 'active'
-                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                : camp.status === 'planning'
-                                ? 'bg-secondary text-secondary-foreground border-border'
-                                : camp.status === 'paused'
-                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                : 'bg-muted text-muted-foreground border-border'
-                            }`}
-                          >
-                            <option value="active" className="bg-background text-foreground">Active</option>
-                            <option value="planning" className="bg-background text-foreground">Planning</option>
-                            <option value="paused" className="bg-background text-foreground">Paused</option>
-                            <option value="completed" className="bg-background text-foreground">Completed</option>
-                          </select>
+                          <div className="relative inline-flex items-center">
+                            <span
+                              className={cn(
+                                "absolute left-2.5 size-1.5 rounded-full pointer-events-none z-10",
+                                camp.status === 'active' && "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]",
+                                camp.status === 'paused' && "bg-amber-500",
+                                camp.status === 'planning' && "bg-sky-500",
+                                camp.status === 'completed' && "bg-muted-foreground/60"
+                              )}
+                            />
+                            <select
+                              value={camp.status}
+                              onChange={(e) =>
+                                handleStatusChange(
+                                  camp._id,
+                                  e.target.value as 'active' | 'planning' | 'paused' | 'completed'
+                                )
+                              }
+                              className={cn(
+                                "h-7 pl-6 pr-6 text-xs font-medium rounded-md border cursor-pointer outline-none transition-colors appearance-none capitalize",
+                                camp.status === 'active' && "bg-emerald-500/[0.08] border-emerald-500/25 text-foreground hover:bg-emerald-500/[0.14]",
+                                camp.status === 'paused' && "bg-amber-500/[0.08] border-amber-500/25 text-foreground hover:bg-amber-500/[0.14]",
+                                camp.status === 'planning' && "bg-sky-500/[0.08] border-sky-500/25 text-foreground hover:bg-sky-500/[0.14]",
+                                camp.status === 'completed' && "bg-muted/40 border-border/80 text-muted-foreground hover:bg-muted/60"
+                              )}
+                            >
+                              <option value="active" className="bg-background text-foreground">Active</option>
+                              <option value="planning" className="bg-background text-foreground">Planning</option>
+                              <option value="paused" className="bg-background text-foreground">Paused</option>
+                              <option value="completed" className="bg-background text-foreground">Completed</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 size-3 text-muted-foreground pointer-events-none" />
+                          </div>
                         </TableCell>
 
                         {/* Budget (Inline Modifiable) */}

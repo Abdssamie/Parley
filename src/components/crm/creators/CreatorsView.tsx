@@ -5,13 +5,14 @@ import { api } from '../../../../convex/_generated/api'
 import type { Doc, Id } from '../../../../convex/_generated/dataModel'
 import {
   Users,
-  Plus,
   Trash2,
   Send,
   Search,
   Check,
   Pencil,
   Eye,
+  ChevronDown,
+  UserRoundPlus,
 } from 'lucide-react'
 import { CreatorDrawer } from './CreatorDrawer'
 import { NewCreatorModal } from './NewCreatorModal'
@@ -35,6 +36,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 
 interface CreatorsViewProps {
   onLaunchOutreach?: (creator: Doc<'creators'>) => void
@@ -100,7 +102,7 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
     }
 
     if (filterStatus !== 'all') {
-      list = list.filter((c) => c.status === filterStatus)
+      list = list.filter((c) => (c.status || 'collected') === filterStatus)
     }
 
     return list
@@ -252,20 +254,23 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
                 <SelectItem value="twitter">Twitter / X</SelectItem>
                 <SelectItem value="tiktok">TikTok</SelectItem>
                 <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                <SelectItem value="substack">Substack</SelectItem>
                 <SelectItem value="twitch">Twitch</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger size="sm" className="h-8 text-xs w-[125px] bg-background/80">
-                <SelectValue placeholder="Stage" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Stages</SelectItem>
-                <SelectItem value="collected">Identified</SelectItem>
-                <SelectItem value="outreached">Outreached</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="collected">Collected</SelectItem>
+                <SelectItem value="in_outreach">In Outreach</SelectItem>
                 <SelectItem value="negotiating">Negotiating</SelectItem>
                 <SelectItem value="contracted">Contracted</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -284,13 +289,14 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
             )}
 
             <Button
-              size="icon"
+              size="sm"
               onClick={() => setIsNewModalOpen(true)}
-              className="size-8 shadow-xs"
+              className="h-8 text-xs gap-1.5 px-2.5 shadow-xs"
               title="Add Creator"
               aria-label="Add Creator"
             >
-              <Plus className="size-4" />
+              <UserRoundPlus className="size-3.5" />
+              <span>Add Creator</span>
             </Button>
           </div>
         </div>
@@ -305,14 +311,14 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
               <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
                 {searchQuery || filterPlatform !== 'all' || filterStatus !== 'all'
                   ? 'Try modifying your search or platform filters.'
-                  : 'Start discovering creators using Firecrawl intelligence or add them manually.'}
+                  : 'Start discovering creators using intelligence tools or add them manually.'}
               </p>
               <Button
                 size="sm"
                 onClick={() => setIsNewModalOpen(true)}
                 className="flex items-center gap-1.5 text-xs"
               >
-                <Plus className="size-3.5" />
+                <UserRoundPlus className="size-3.5" />
                 <span>Add Creator</span>
               </Button>
             </div>
@@ -466,31 +472,43 @@ export const CreatorsView: React.FC<CreatorsViewProps> = ({ onLaunchOutreach }) 
 
                         {/* Status (Inline Select) */}
                         <TableCell className="py-2.5" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={creator.status}
-                            onChange={(e) =>
-                              handleStatusChange(
-                                creator._id,
-                                e.target.value as 'collected' | 'in_outreach' | 'negotiating' | 'contracted' | 'declined',
-                                e
-                              )
-                            }
-                            className={`h-7 text-xs font-semibold rounded-md border px-2 py-0.5 cursor-pointer outline-none transition-colors ${
-                              creator.status === 'contracted'
-                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                : creator.status === 'negotiating'
-                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                : creator.status === 'in_outreach'
-                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                                : 'bg-muted text-muted-foreground border-border'
-                            }`}
-                          >
-                            <option value="collected" className="bg-background text-foreground">Collected</option>
-                            <option value="in_outreach" className="bg-background text-foreground">In Outreach</option>
-                            <option value="negotiating" className="bg-background text-foreground">Negotiating</option>
-                            <option value="contracted" className="bg-background text-foreground">Contracted</option>
-                            <option value="declined" className="bg-background text-foreground">Declined</option>
-                          </select>
+                          <div className="relative inline-flex items-center">
+                            <span
+                              className={cn(
+                                "absolute left-2.5 size-1.5 rounded-full pointer-events-none z-10",
+                                creator.status === 'contracted' && "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]",
+                                creator.status === 'negotiating' && "bg-amber-500",
+                                creator.status === 'in_outreach' && "bg-sky-500",
+                                creator.status === 'declined' && "bg-rose-500/80",
+                                (!creator.status || creator.status === 'collected') && "bg-muted-foreground/60"
+                              )}
+                            />
+                            <select
+                              value={creator.status}
+                              onChange={(e) =>
+                                handleStatusChange(
+                                  creator._id,
+                                  e.target.value as 'collected' | 'in_outreach' | 'negotiating' | 'contracted' | 'declined',
+                                  e
+                                )
+                              }
+                              className={cn(
+                                "h-7 pl-6 pr-6 text-xs font-medium rounded-md border cursor-pointer outline-none transition-colors appearance-none",
+                                creator.status === 'contracted' && "bg-emerald-500/[0.08] border-emerald-500/25 text-foreground hover:bg-emerald-500/[0.14]",
+                                creator.status === 'negotiating' && "bg-amber-500/[0.08] border-amber-500/25 text-foreground hover:bg-amber-500/[0.14]",
+                                creator.status === 'in_outreach' && "bg-sky-500/[0.08] border-sky-500/25 text-foreground hover:bg-sky-500/[0.14]",
+                                creator.status === 'declined' && "bg-rose-500/[0.08] border-rose-500/25 text-foreground hover:bg-rose-500/[0.14]",
+                                (!creator.status || creator.status === 'collected') && "bg-muted/40 border-border/80 text-muted-foreground hover:bg-muted/60"
+                              )}
+                            >
+                              <option value="collected" className="bg-background text-foreground">Collected</option>
+                              <option value="in_outreach" className="bg-background text-foreground">In Outreach</option>
+                              <option value="negotiating" className="bg-background text-foreground">Negotiating</option>
+                              <option value="contracted" className="bg-background text-foreground">Contracted</option>
+                              <option value="declined" className="bg-background text-foreground">Declined</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 size-3 text-muted-foreground pointer-events-none" />
+                          </div>
                         </TableCell>
 
                         {/* Followers (Inline Modifiable) */}

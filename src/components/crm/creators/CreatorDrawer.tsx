@@ -6,10 +6,11 @@ import {
   Eye,
   DollarSign,
   TrendingUp,
-  Sparkles,
+  FileText,
   ShieldCheck,
   Send,
   Globe,
+  Check,
 } from 'lucide-react'
 import type { Doc } from '../../../../convex/_generated/dataModel'
 import {
@@ -76,7 +77,7 @@ export const CreatorDrawer: React.FC<CreatorDrawerProps> = ({
             </Badge>
             {creator.brandFitScore && (
               <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 flex items-center gap-1 font-medium ml-auto">
-                <Sparkles className="size-3" />
+                <Check className="size-3" />
                 Fit: {creator.brandFitScore}%
               </Badge>
             )}
@@ -169,8 +170,8 @@ export const CreatorDrawer: React.FC<CreatorDrawerProps> = ({
           {creator.scrapedSummary && (
             <div className="space-y-1.5 text-xs">
               <span className="font-semibold text-foreground flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-amber-500" />
-                Firecrawl Dossier
+                <FileText className="size-3.5 text-primary" />
+                Creator Dossier
               </span>
               <p className="p-3 rounded-lg border border-border bg-muted/40 text-muted-foreground leading-relaxed">
                 {creator.scrapedSummary}

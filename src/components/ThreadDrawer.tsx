@@ -140,10 +140,10 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
 
           {/* Quick Intelligence Summary */}
           {creator?.scrapedSummary && (
-            <div className="mt-3 rounded-lg bg-slate-100/80 p-2.5 text-xs text-slate-600 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200 mb-1">
-                <Sparkles className="h-3 w-3 text-orange-500" />
-                <span>Firecrawl Scraped Intelligence</span>
+            <div className="mt-3 rounded-lg bg-muted/60 p-2.5 text-xs text-muted-foreground border border-border">
+              <div className="flex items-center gap-1.5 font-semibold text-foreground mb-1">
+                <Bot className="size-3.5 text-primary" />
+                <span>Creator Intelligence</span>
               </div>
               <p className="line-clamp-2 text-[11px] leading-relaxed">{creator.scrapedSummary}</p>
               {creator.pastSponsors && creator.pastSponsors.length > 0 && (

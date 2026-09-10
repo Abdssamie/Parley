@@ -185,7 +185,7 @@ export const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onCl
             />
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-3 sticky bottom-0 bg-background/95 backdrop-blur-xs pb-1 mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>

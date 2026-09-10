@@ -1,15 +1,38 @@
 import React, { useState } from 'react'
 import { useAction, useMutation } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
-import { X, Sparkles, Loader2, Plus, Globe, Check } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Loader2, Globe, UserRoundPlus, Check, Bot } from 'lucide-react'
 
 interface NewCreatorModalProps {
   isOpen: boolean
   onClose: () => void
+  initialMode?: 'auto' | 'manual'
 }
 
-export const NewCreatorModal: React.FC<NewCreatorModalProps> = ({ isOpen, onClose }) => {
-  const [mode, setMode] = useState<'firecrawl' | 'manual'>('firecrawl')
+export const NewCreatorModal: React.FC<NewCreatorModalProps> = ({
+  isOpen,
+  onClose,
+  initialMode = 'auto',
+}) => {
+  const [mode, setMode] = useState<'auto' | 'manual'>(initialMode)
   const [url, setUrl] = useState('')
   const [targetNiche, setTargetNiche] = useState('Developer Tools & AI Workflows')
   const [isScraping, setIsScraping] = useState(false)
@@ -32,9 +55,7 @@ export const NewCreatorModal: React.FC<NewCreatorModalProps> = ({ isOpen, onClos
   const scrapeAction = useAction(api.firecrawl.scrapeCreator)
   const createCreatorMutation = useMutation(api.creators.create)
 
-  if (!isOpen) return null
-
-  const handleFirecrawlEnrich = async (e: React.FormEvent) => {
+  const handleAutoEnrich = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!url) return
 
@@ -68,8 +89,8 @@ export const NewCreatorModal: React.FC<NewCreatorModalProps> = ({ isOpen, onClos
       setUrl('')
       onClose()
     } catch (err) {
-      console.error('Firecrawl scraping error:', err)
-      setScrapeError('Failed to scrape with Firecrawl. Check URL or try manual entry.')
+      console.error('Creator import error:', err)
+      setScrapeError('Failed to import creator profile. Check the URL or try manual entry.')
     } finally {
       setIsScraping(false)
     }
@@ -105,273 +126,275 @@ export const NewCreatorModal: React.FC<NewCreatorModalProps> = ({ isOpen, onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-[#14161c] border border-[#262a36] rounded-xl shadow-2xl overflow-hidden text-slate-200">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-[#22252f] flex items-center justify-between bg-[#111215]">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-pink-500/20 text-pink-400 flex items-center justify-center">
-              <Plus className="w-4 h-4" />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <UserRoundPlus className="size-4.5" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Add New Creator</h3>
-              <p className="text-xs text-slate-400">Collect or auto-enrich via Firecrawl</p>
+              <DialogTitle className="text-base font-semibold">Add New Creator</DialogTitle>
+              <DialogDescription className="text-xs">
+                Import automatically from profile URL or enter details manually.
+              </DialogDescription>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#1c1f26] rounded-md transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        {/* Tab Selection */}
-        <div className="flex border-b border-[#22252f] bg-[#111215] px-6 text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => setMode('firecrawl')}
-            className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
-              mode === 'firecrawl'
-                ? 'border-pink-500 text-pink-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Instant Firecrawl Scrape</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('manual')}
-            className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
-              mode === 'manual'
-                ? 'border-pink-500 text-pink-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Manual Entry</span>
-          </button>
-        </div>
+        {/* Tabbed Form */}
+        <Tabs
+          value={mode}
+          onValueChange={(val) => setMode(val as 'auto' | 'manual')}
+          className="flex-1 flex flex-col min-h-0 px-6 pb-6 pt-1"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="auto" className="text-xs gap-1.5">
+              <Bot className="size-3.5" />
+              <span>Automatic Import</span>
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="text-xs gap-1.5">
+              <Globe className="size-3.5" />
+              <span>Manual Entry</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Modal Body */}
-        {mode === 'firecrawl' ? (
-          <form onSubmit={handleFirecrawlEnrich} className="p-6 space-y-4 text-xs">
-            <div className="space-y-1.5">
-              <label htmlFor="firecrawl-url" className="text-slate-300 font-medium">
-                Creator URL (Portfolio, Media Kit, or YouTube Channel)
-              </label>
-              <input
-                id="firecrawl-url"
-                type="url"
-                required
-                placeholder="https://youtube.com/@ThePrimeagen or https://sarahchen.dev"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 text-xs"
-              />
-              <p className="text-[11px] text-slate-400">
-                Firecrawl will parse the page to extract contact email, audience metrics, brand fit score, and past sponsors.
-              </p>
-            </div>
+          <div className="flex-1 overflow-y-auto pr-1">
+            <TabsContent value="auto" className="m-0 space-y-4">
+              <form onSubmit={handleAutoEnrich} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="creator-url" className="text-xs">
+                    Creator URL (Channel, Portfolio, or Media Kit)
+                  </Label>
+                  <Input
+                    id="creator-url"
+                    type="url"
+                    required
+                    placeholder="https://youtube.com/@ThePrimeagen or https://sarahchen.dev"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="text-xs"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Automatically extracts contact email, audience metrics, brand fit score, and past sponsors.
+                  </p>
+                </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="firecrawl-niche" className="text-slate-300 font-medium">Target Niche</label>
-              <input
-                id="firecrawl-niche"
-                type="text"
-                value={targetNiche}
-                onChange={(e) => setTargetNiche(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white focus:outline-none focus:border-pink-500 text-xs"
-              />
-            </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="target-niche" className="text-xs">
+                    Target Campaign / Audience Niche
+                  </Label>
+                  <Input
+                    id="target-niche"
+                    type="text"
+                    required
+                    placeholder="e.g. AI Engineers, Rust Developers"
+                    value={targetNiche}
+                    onChange={(e) => setTargetNiche(e.target.value)}
+                    className="text-xs"
+                  />
+                </div>
 
-            {scrapeError && (
-              <div className="p-3 rounded-md bg-rose-950/40 border border-rose-800/40 text-rose-400 text-xs">
-                {scrapeError}
-              </div>
-            )}
-
-            <div className="pt-2 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3.5 py-1.5 rounded-md border border-[#2a2f3d] text-slate-300 hover:bg-[#1b1e26] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isScraping || !url}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-pink-600 hover:bg-pink-500 text-white font-medium disabled:opacity-50 transition-colors shadow"
-              >
-                {isScraping ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Scraping with Firecrawl...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Enrich & Add to CRM</span>
-                  </>
+                {scrapeError && (
+                  <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                    {scrapeError}
+                  </div>
                 )}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleManualSubmit} className="p-6 space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label htmlFor="manual-name" className="text-slate-300 font-medium">Creator Name</label>
-                <input
-                  id="manual-name"
-                  type="text"
-                  required
-                  placeholder="e.g. Alex Rivera"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
 
-              <div className="space-y-1">
-                <label htmlFor="manual-email" className="text-slate-300 font-medium">Contact Email</label>
-                <input
-                  id="manual-email"
-                  type="email"
-                  required
-                  placeholder="alex@riveratech.io"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
-            </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onClose}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isScraping || !url}
+                    className="text-xs gap-1.5"
+                  >
+                    {isScraping ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        <span>Importing Creator...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserRoundPlus className="size-3.5" />
+                        <span>Enrich & Add to CRM</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label htmlFor="manual-platform" className="text-slate-300 font-medium">Platform</label>
-                <select
-                  id="manual-platform"
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value as typeof platform)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                >
-                  <option value="youtube">YouTube</option>
-                  <option value="twitter">Twitter / X</option>
-                  <option value="substack">Substack</option>
-                  <option value="twitch">Twitch</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="linkedin">LinkedIn</option>
-                </select>
-              </div>
+            <TabsContent value="manual" className="m-0 space-y-4">
+              <form onSubmit={handleManualSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-name" className="text-xs">Creator Name</Label>
+                    <Input
+                      id="manual-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Alex Rivera"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label htmlFor="manual-country" className="text-slate-300 font-medium">Country</label>
-                <input
-                  id="manual-country"
-                  type="text"
-                  placeholder="US, UK, CA, DE..."
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
-            </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-email" className="text-xs">Contact Email</Label>
+                    <Input
+                      id="manual-email"
+                      type="email"
+                      required
+                      placeholder="alex@riveratech.io"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <label htmlFor="manual-followers" className="text-slate-300 font-medium">Followers</label>
-                <input
-                  id="manual-followers"
-                  type="number"
-                  value={followers ?? ''}
-                  onChange={(e) => setFollowers(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-platform" className="text-xs">Platform</Label>
+                    <Select
+                      value={platform}
+                      onValueChange={(val) => setPlatform(val as typeof platform)}
+                    >
+                      <SelectTrigger id="manual-platform" className="text-xs">
+                        <SelectValue placeholder="Select platform" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="youtube" className="text-xs">YouTube</SelectItem>
+                        <SelectItem value="twitter" className="text-xs">Twitter / X</SelectItem>
+                        <SelectItem value="substack" className="text-xs">Substack</SelectItem>
+                        <SelectItem value="twitch" className="text-xs">Twitch</SelectItem>
+                        <SelectItem value="instagram" className="text-xs">Instagram</SelectItem>
+                        <SelectItem value="tiktok" className="text-xs">TikTok</SelectItem>
+                        <SelectItem value="linkedin" className="text-xs">LinkedIn</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-1">
-                <label htmlFor="manual-views" className="text-slate-300 font-medium">Avg. Views</label>
-                <input
-                  id="manual-views"
-                  type="number"
-                  value={views ?? ''}
-                  onChange={(e) => setViews(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-country" className="text-xs">Country</Label>
+                    <Input
+                      id="manual-country"
+                      type="text"
+                      placeholder="US, UK, CA, DE..."
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
 
-              <div className="space-y-1">
-                <label htmlFor="manual-estcost" className="text-slate-300 font-medium">Est. Cost ($)</label>
-                <input
-                  id="manual-estcost"
-                  type="number"
-                  value={estCost ?? ''}
-                  onChange={(e) => setEstCost(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
+                <div className="grid grid-cols-4 gap-2.5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-followers" className="text-xs">Followers</Label>
+                    <Input
+                      id="manual-followers"
+                      type="number"
+                      value={followers ?? ''}
+                      onChange={(e) => setFollowers(e.target.value ? Number(e.target.value) : undefined)}
+                      className="text-xs"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label htmlFor="manual-engagement" className="text-slate-300 font-medium">Engage %</label>
-                <input
-                  id="manual-engagement"
-                  type="number"
-                  step="0.1"
-                  value={engagementRate ?? ''}
-                  onChange={(e) => setEngagementRate(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-                />
-              </div>
-            </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-views" className="text-xs">Avg Views</Label>
+                    <Input
+                      id="manual-views"
+                      type="number"
+                      value={views ?? ''}
+                      onChange={(e) => setViews(e.target.value ? Number(e.target.value) : undefined)}
+                      className="text-xs"
+                    />
+                  </div>
 
-            <div className="space-y-1">
-              <label htmlFor="manual-summary" className="text-slate-300 font-medium">Notes / Profile Summary</label>
-              <input
-                id="manual-summary"
-                type="text"
-                placeholder="Key audience demographics, past content focus..."
-                value={scrapedSummary}
-                onChange={(e) => setScrapedSummary(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-              />
-            </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-estcost" className="text-xs">Est. Cost ($)</Label>
+                    <Input
+                      id="manual-estcost"
+                      type="number"
+                      value={estCost ?? ''}
+                      onChange={(e) => setEstCost(e.target.value ? Number(e.target.value) : undefined)}
+                      className="text-xs"
+                    />
+                  </div>
 
-            <div className="space-y-1">
-              <label htmlFor="manual-sponsors" className="text-slate-300 font-medium">Past Sponsors (comma separated)</label>
-              <input
-                id="manual-sponsors"
-                type="text"
-                placeholder="Convex, Linear, Supabase"
-                value={pastSponsorsText}
-                onChange={(e) => setPastSponsorsText(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1b1e26] border border-[#2a2f3d] rounded-md text-white text-xs focus:border-pink-500 focus:outline-none"
-              />
-            </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-engagement" className="text-xs">Engage %</Label>
+                    <Input
+                      id="manual-engagement"
+                      type="number"
+                      step="0.1"
+                      value={engagementRate ?? ''}
+                      onChange={(e) => setEngagementRate(e.target.value ? Number(e.target.value) : undefined)}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
 
-            <div className="pt-2 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3.5 py-1.5 rounded-md border border-[#2a2f3d] text-slate-300 hover:bg-[#1b1e26] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-pink-600 hover:bg-pink-500 text-white font-medium transition-colors shadow"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Save Creator</span>
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-summary" className="text-xs">Notes / Profile Summary</Label>
+                  <Input
+                    id="manual-summary"
+                    type="text"
+                    placeholder="Key audience demographics, past content focus..."
+                    value={scrapedSummary}
+                    onChange={(e) => setScrapedSummary(e.target.value)}
+                    className="text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="manual-sponsors" className="text-xs">Past Sponsors (comma separated)</Label>
+                  <Input
+                    id="manual-sponsors"
+                    type="text"
+                    placeholder="Convex, Linear, Supabase"
+                    value={pastSponsorsText}
+                    onChange={(e) => setPastSponsorsText(e.target.value)}
+                    className="text-xs"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onClose}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="text-xs gap-1.5"
+                  >
+                    <Check className="size-3.5" />
+                    <span>Save Creator</span>
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   )
 }
+

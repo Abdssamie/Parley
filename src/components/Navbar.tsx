@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="hidden lg:flex items-center gap-2">
           <Badge variant="outline" className="gap-1.5 border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
             <Globe className="h-3 w-3 text-orange-500" />
-            Firecrawl Scraper
+            Web Intelligence
           </Badge>
           <Badge variant="outline" className="gap-1.5 border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
             <Mail className="h-3 w-3 text-blue-500" />

@@ -4,11 +4,10 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Doc } from '../../convex/_generated/dataModel'
 import {
-  Users,
   Target,
-  Compass,
-  Sparkles,
   ArrowUpRight,
+  UserRoundPlus,
+  Compass,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -17,7 +16,6 @@ import type { AppNavView } from './app-sidebar'
 
 interface DashboardOverviewProps {
   onNavigate: (view: AppNavView) => void
-  onOpenResearch: () => void
   onOpenNewCampaign: () => void
   onOpenNewCreator: () => void
   onSelectCampaign: (campaign: Doc<'campaigns'>) => void
@@ -25,7 +23,6 @@ interface DashboardOverviewProps {
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onNavigate,
-  onOpenResearch,
   onOpenNewCampaign,
   onOpenNewCreator,
   onSelectCampaign,
@@ -90,15 +87,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* 1. Welcome & Quick Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/60">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <span>Executive Dashboard</span>
-            <div className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5 text-xs text-zinc-300 font-mono">
-              Live WebSocket Sync
-            </div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            Executive Dashboard
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Realtime autonomous outreach metrics, campaign allocations, and talent acquisition.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -114,21 +105,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <Button
             size="sm"
-            variant="outline"
             onClick={onOpenNewCreator}
             className="flex items-center gap-1.5 text-xs shadow-xs"
           >
-            <Users className="size-3.5" />
+            <UserRoundPlus className="size-3.5" />
             <span>Add Creator</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={onOpenResearch}
-            className="flex items-center gap-1.5 text-xs shadow-xs font-medium"
-          >
-            <Sparkles className="size-3.5" />
-            <span>AI Pitch Agent</span>
           </Button>
         </div>
       </div>
@@ -333,7 +314,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/40 border border-white/[0.06] text-zinc-200 font-medium">
                 <div className="flex items-center gap-2">
                   <div className="size-2 rounded-full bg-indigo-400" />
-                  <span>Firecrawl Scraper</span>
+                  <span>Web Intelligence</span>
                 </div>
                 <span className="text-zinc-400 text-[11px]">Connected</span>
               </div>

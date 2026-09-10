@@ -18,6 +18,7 @@ import { CreatorsView } from './components/crm/creators/CreatorsView'
 import { CampaignsView } from './components/crm/campaigns/CampaignsView'
 import { DashboardOverview } from './components/DashboardOverview'
 import { NewCampaignModal } from './components/crm/campaigns/NewCampaignModal'
+import { NewCreatorModal } from './components/crm/creators/NewCreatorModal'
 import { PipelineBoard } from './components/PipelineBoard'
 import { CampaignMetrics } from './components/CampaignMetrics'
 import { ThreadDrawer } from './components/ThreadDrawer'
@@ -25,8 +26,16 @@ import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
 import { TemplatesView } from './components/templates/TemplatesView'
 import type { EnrichedThread, PipelineStage } from './types'
-import { Zap, Plus, Bot, Settings as SettingsIcon } from 'lucide-react'
+import { Zap, Plus, Settings as SettingsIcon, Sun, Moon } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './components/ui/select'
+import { useTheme } from './hooks/useTheme'
 
 export interface AppProps {
   initialView?: AppNavView
@@ -36,6 +45,12 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   // 1. Navigation View State
   const [currentView, setCurrentView] = useState<AppNavView>(initialView)
   const navigate = useNavigate()
+
+  // Theme toggle
+  const { theme, toggleTheme } = useTheme()
+
+  // Selected campaign state — single source of truth across all views
+  const [selectedCampaignId, setSelectedCampaignId] = useState<Id<'campaigns'> | null>(null)
 
   const handleSelectView = (view: AppNavView) => {
     setCurrentView(view)
@@ -60,11 +75,24 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     }
   }
 
+  // Handler: select a campaign and navigate to its pipeline
+  const handleSelectCampaign = (campaign: Doc<'campaigns'>) => {
+    setSelectedCampaignId(campaign._id)
+    setCurrentView('pipeline')
+    void navigate({ to: '/pipeline' })
+  }
+
   // 2. Convex Realtime Live Subscriptions
   const campaigns = useQuery(api.campaigns.list, {})
   const creators = useQuery(api.creators.list, {})
-  const activeCampaign = campaigns && campaigns.length > 0 ? campaigns[0] : null
-  const campaignId = activeCampaign?._id ?? null
+
+  // Resolved active campaign: prefer selected, fall back to first campaign when campaigns load
+  const activeCampaign =
+    campaigns && campaigns.length > 0
+      ? (campaigns.find((c) => c._id === selectedCampaignId) ?? campaigns[0])
+      : null
+
+  const campaignId: Id<'campaigns'> | null = activeCampaign?._id ?? null
 
   const metrics = useQuery(api.campaigns.getMetrics, { campaignId: campaignId ?? undefined })
   const rawThreads = useQuery(api.threads.listByCampaign, { campaignId: campaignId ?? undefined })
@@ -75,6 +103,7 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   const [isResearchOpen, setIsResearchOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
+  const [isNewCreatorOpen, setIsNewCreatorOpen] = useState(false)
   const [isSimulatingGlobal, setIsSimulatingGlobal] = useState(false)
 
   // 4. Selected Thread Details (Live Subscription)
@@ -88,9 +117,11 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   const submitHumanMessageMutation = useMutation(api.threads.submitHumanMessage)
   const updateCampaignMutation = useMutation(api.campaigns.update)
   const researchAndPitchAction = useAction(api.pipeline.autonomousResearchAndPitch)
+  const scrapeLeadsAction = useAction(api.pipeline.scrapeLeadsForCampaign)
+  const scrapeLeadFromUrlAction = useAction(api.pipeline.scrapeLeadFromUrl)
   const processInboundWithAgentAction = useAction(api.agent.processInboundWithAgent)
 
-  // 6. Derived State during Render (React Best Practice: zero setState in useEffect)
+  // 6. Derived State during Render
   const threads: EnrichedThread[] = rawThreads ?? []
 
   // 7. Event Handlers
@@ -122,12 +153,12 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     }
   }
 
-  const handleLaunchResearch = async (creatorUrl: string) => {
-    if (!campaignId) return
-    await researchAndPitchAction({
-      campaignId,
-      creatorUrl,
-    })
+  const handleScrapeLeads = async (cId: Id<'campaigns'>, maxLeads: number) => {
+    return await scrapeLeadsAction({ campaignId: cId, maxLeads })
+  }
+
+  const handleScrapeUrl = async (cId: Id<'campaigns'>, creatorUrl: string) => {
+    return await scrapeLeadFromUrlAction({ campaignId: cId, creatorUrl })
   }
 
   const handleSimulateCreatorReply = async (params: {
@@ -159,7 +190,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   const handleGlobalSimulateReply = async () => {
     if (threads.length === 0) return
     setIsSimulatingGlobal(true)
-
     try {
       const candidate =
         threads.find((t) => t.stage === 'negotiating') ||
@@ -173,7 +203,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
           `Thanks for the proposal! We are interested in partnering. Can we do $2,200 with 1 YouTube segment + 2 social posts?`,
         ]
         const randomReply = testReplies[Math.floor(Math.random() * testReplies.length)]
-
         await processInboundWithAgentAction({
           threadId: candidate._id,
           incomingBody: randomReply,
@@ -189,7 +218,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Official shadcn AppSidebar */}
       <AppSidebar
         currentView={currentView}
         onSelectView={handleSelectView}
@@ -200,7 +228,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
         onOpenResearch={() => setIsResearchOpen(true)}
       />
 
-      {/* Main Inset Layout with Claymorphic Theme */}
       <SidebarInset className="bg-background text-foreground flex flex-col h-screen overflow-hidden">
         {/* Persistent Single Top Navigation Bar */}
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4 bg-background/95 backdrop-blur-sm z-20">
@@ -233,6 +260,27 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Campaign switcher: visible on pipeline & settings where campaign context matters */}
+            {(currentView === 'pipeline' || currentView === 'settings') &&
+              campaigns &&
+              campaigns.length > 1 && (
+                <Select
+                  value={campaignId ?? ''}
+                  onValueChange={(id) => setSelectedCampaignId(id as Id<'campaigns'>)}
+                >
+                  <SelectTrigger className="h-8 text-xs w-[180px] shadow-xs">
+                    <SelectValue placeholder="Select campaign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaigns.map((c) => (
+                      <SelectItem key={c._id} value={c._id} className="text-xs">
+                        {c.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
             {currentView === 'pipeline' && (
               <>
                 <Button
@@ -242,7 +290,7 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
                   disabled={isSimulatingGlobal || threads.length === 0}
                   className="flex items-center gap-1.5 text-xs shadow-xs"
                 >
-                  <Zap className={`size-3.5 text-amber-500 ${isSimulatingGlobal ? 'animate-spin' : ''}`} />
+                  <Zap className={`size-3.5 text-muted-foreground ${isSimulatingGlobal ? 'animate-spin' : ''}`} />
                   <span>Simulate Reply</span>
                 </Button>
 
@@ -257,37 +305,38 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
               </>
             )}
 
-            {currentView !== 'pipeline' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsResearchOpen(true)}
-                className="flex items-center gap-1.5 text-xs shadow-xs"
-              >
-                <Bot className="size-3.5 text-primary" />
-                <span>AI Research & Pitch</span>
-              </Button>
-            )}
+            {/* Dark / Light theme toggle */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              className="size-8 shadow-xs"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <Sun className="size-3.5" />
+              ) : (
+                <Moon className="size-3.5" />
+              )}
+            </Button>
           </div>
         </header>
 
-        {/* Dynamic Main View with Natural Page Padding & Scrolling */}
+        {/* Dynamic Main View */}
         <main className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6">
           {currentView === 'dashboard' && (
             <DashboardOverview
               onNavigate={(v) => setCurrentView(v)}
-              onOpenResearch={() => setIsResearchOpen(true)}
               onOpenNewCampaign={() => setIsNewCampaignOpen(true)}
-              onOpenNewCreator={() => setCurrentView('creators')}
-              onSelectCampaign={() => setCurrentView('pipeline')}
+              onOpenNewCreator={() => setIsNewCreatorOpen(true)}
+              onSelectCampaign={handleSelectCampaign}
             />
           )}
 
           {currentView === 'campaigns' && (
             <CampaignsView
-              onSelectCampaign={() => {
-                setCurrentView('pipeline')
-              }}
+              onSelectCampaign={handleSelectCampaign}
             />
           )}
 
@@ -354,12 +403,13 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
         onSimulateCreatorReply={handleSimulateCreatorReply}
       />
 
-      {/* Research & Pitch Modal */}
+      {/* Find Leads Modal */}
       <ResearchModal
         isOpen={isResearchOpen}
         onClose={() => setIsResearchOpen(false)}
         campaignId={campaignId}
-        onLaunchResearch={handleLaunchResearch}
+        onScrapeLeads={handleScrapeLeads}
+        onScrapeUrl={handleScrapeUrl}
       />
 
       {/* Campaign Settings Modal */}
@@ -383,8 +433,15 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
         isOpen={isNewCampaignOpen}
         onClose={() => setIsNewCampaignOpen(false)}
       />
+
+      {/* Add Creator Modal — shared between Dashboard and Creators page */}
+      <NewCreatorModal
+        isOpen={isNewCreatorOpen}
+        onClose={() => setIsNewCreatorOpen(false)}
+      />
     </SidebarProvider>
   )
 }
 
 export default App
+

@@ -85,6 +85,128 @@ parley@agentmail.to`;
   },
 });
 
+
+/**
+ * Phase 1 — Lead Scraping: Discover creators from the web based on the campaign's
+ * target niche and save them as collected leads. No outreach is sent.
+ */
+export const scrapeLeadsForCampaign = action({
+  args: {
+    campaignId: v.id("campaigns"),
+    maxLeads: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ found: number; skipped: number; leads: Array<{ name: string; url: string; niche: string; fitScore: number }> }> => {
+    const limit = args.maxLeads ?? 5;
+
+    // 1. Read campaign to get the target niche
+    const campaign: Doc<"campaigns"> | null = await ctx.runQuery(api.campaigns.get, {
+      id: args.campaignId,
+    });
+    if (!campaign) throw new Error("Campaign not found");
+
+    const niche = campaign.targetNiche;
+
+    // 2. Search the web for creator profiles in this niche
+    const searchQuery = `${niche} content creator influencer media kit sponsorship rates`;
+    const searchResults = await ctx.runAction(api.firecrawl.searchWeb, {
+      query: searchQuery,
+      limit: limit + 3, // fetch extras to cover scrape failures
+    });
+
+    const resultsList = searchResults?.web ?? [];
+    if (resultsList.length === 0) {
+      return { found: 0, skipped: 0, leads: [] };
+    }
+
+    let found = 0;
+    let skipped = 0;
+    const leads: Array<{ name: string; url: string; niche: string; fitScore: number }> = [];
+
+    for (const result of resultsList) {
+      if (found >= limit) break;
+
+      const url: string | undefined =
+        typeof result === "object" && result !== null && "url" in result
+          ? (result as { url: string }).url
+          : undefined;
+      if (!url) { skipped++; continue; }
+
+      try {
+        // 3. Scrape each discovered URL for creator profile data
+        const crawled = await ctx.runAction(api.firecrawl.scrapeCreator, {
+          url,
+          targetNiche: niche,
+        });
+
+        // 4. Save as a collected lead — status "collected", no thread or email
+        await ctx.runMutation(api.creators.create, {
+          name: crawled.name,
+          bioLink: crawled.bioLink,
+          email: crawled.contactEmail,
+          platform: "youtube",
+          status: "collected",
+          estCost: crawled.baseRate ?? undefined,
+          audienceNiche: crawled.audienceNiche,
+          brandFitScore: crawled.brandFitScore,
+          scrapedSummary: crawled.scrapedSummary,
+          pastSponsors: crawled.pastSponsors,
+        });
+
+        leads.push({ name: crawled.name, url, niche: crawled.audienceNiche, fitScore: crawled.brandFitScore });
+        found++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    return { found, skipped, leads };
+  },
+});
+
+/**
+ * Phase 1 — Lead Scraping (manual): Scrape a single creator URL and save as a
+ * collected lead. No outreach is sent.
+ */
+export const scrapeLeadFromUrl = action({
+  args: {
+    campaignId: v.id("campaigns"),
+    creatorUrl: v.string(),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ name: string; url: string; fitScore: number }> => {
+    const campaign: Doc<"campaigns"> | null = await ctx.runQuery(api.campaigns.get, {
+      id: args.campaignId,
+    });
+    if (!campaign) throw new Error("Campaign not found");
+
+    const crawled = await ctx.runAction(api.firecrawl.scrapeCreator, {
+      url: args.creatorUrl,
+      targetNiche: campaign.targetNiche,
+    });
+
+    await ctx.runMutation(api.creators.create, {
+      name: crawled.name,
+      bioLink: crawled.bioLink,
+      email: crawled.contactEmail,
+      platform: "youtube",
+      status: "collected",
+      estCost: crawled.baseRate ?? undefined,
+      audienceNiche: crawled.audienceNiche,
+      brandFitScore: crawled.brandFitScore,
+      scrapedSummary: crawled.scrapedSummary,
+      pastSponsors: crawled.pastSponsors,
+    });
+
+    return { name: crawled.name, url: args.creatorUrl, fitScore: crawled.brandFitScore };
+  },
+});
+
+
 export const processInboundReply = action({
   args: {
     threadId: v.id("threads"),

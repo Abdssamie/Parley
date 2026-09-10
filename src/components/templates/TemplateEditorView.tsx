@@ -7,20 +7,27 @@ import {
   ArrowLeft,
   Pencil,
   Eye,
-  ChevronDown,
   MoreVertical,
-  HelpCircle,
   Smile,
-  Layers,
   Check,
   Lightbulb,
+  Copy,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { VariablePicker } from "./VariablePicker"
 import { FullPageTemplateEditor } from "./FullPageTemplateEditor"
-import { renderTemplate, extractVariables } from "@/lib/template-engine"
+
+const EMAIL_EMOJIS = ["👋", "🤝", "🚀", "🎯", "🔥", "✨", "💡", "📩", "📈", "⭐", "🎉", "💼"]
 
 interface TemplateEditorViewProps {
   template: Doc<"emailTemplates"> | null
@@ -64,36 +71,12 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
   const [body, setBody] = useState(template?.body ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Simulation context
-  const [selectedCreatorId, setSelectedCreatorId] = useState<string>(
-    creators[0]?._id ?? ""
-  )
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
-    campaigns[0]?._id ?? ""
-  )
-
   const subjectInputRef = useRef<HTMLInputElement>(null)
   const previewTextInputRef = useRef<HTMLInputElement>(null)
 
   // Convex mutations
   const createMutation = useMutation(api.emailTemplates.create)
   const updateMutation = useMutation(api.emailTemplates.update)
-
-  const testCreator = creators.find((c) => c._id === selectedCreatorId) ?? creators[0] ?? null
-  const testCampaign = campaigns.find((c) => c._id === selectedCampaignId) ?? campaigns[0] ?? null
-
-  const previewContext = {
-    creator: testCreator,
-    campaign: testCampaign,
-    sender: { name: senderName, email: senderEmail },
-    brandName: "Parley",
-  }
-
-  const renderedSubject = renderTemplate(subject, previewContext)
-  const renderedBody = renderTemplate(body, previewContext)
-  const detectedSubjectVars = extractVariables(subject)
-  const detectedBodyVars = extractVariables(body)
-  const allDetectedVars = Array.from(new Set([...detectedSubjectVars, ...detectedBodyVars]))
 
   const insertSubjectToken = (token: string) => {
     if (!subjectInputRef.current) {
@@ -277,7 +260,6 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
             className="rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs font-semibold px-5 h-9 shadow-xs cursor-pointer"
           >
             <span>{isSubmitting ? "Saving..." : "Save"}</span>
-            <ChevronDown className="size-3 ml-1 opacity-70" />
           </Button>
         </div>
       </div>
@@ -287,18 +269,50 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
         {/* Left Column: Content Preview Card with Edit button (Image 1) */}
         <div className="lg:col-span-6 space-y-4">
           <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-4 shadow-xs">
-            {/* Header: Content title + 3-dots + Edit button */}
+            {/* Header: Content title + Working 3-dots menu + Edit button */}
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground">Content</h2>
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 text-muted-foreground"
-                >
-                  <MoreVertical className="size-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+                      title="Content options"
+                    >
+                      <MoreVertical className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuItem
+                      onClick={() => setIsFullPageEditing(true)}
+                      className="cursor-pointer gap-2 text-xs"
+                    >
+                      <Pencil className="size-3.5 text-muted-foreground" />
+                      <span>Fullscreen Editor</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        void navigator.clipboard.writeText(body)
+                      }}
+                      className="cursor-pointer gap-2 text-xs"
+                    >
+                      <Copy className="size-3.5 text-muted-foreground" />
+                      <span>Copy body text</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setBody("")}
+                      className="cursor-pointer gap-2 text-xs text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                      <span>Clear body</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {/* Clicking Edit opens the Dedicated Full-Page Canvas (Image 0)! */}
                 <Button
                   type="button"
@@ -329,7 +343,7 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
                 {/* Subject Header */}
                 <div className="border-b border-border/50 pb-2 text-center">
                   <h3 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-                    {renderedSubject || (
+                    {subject || (
                       <span className="text-muted-foreground font-normal italic">
                         {"{{subject}}"}
                       </span>
@@ -339,7 +353,7 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
 
                 {/* Body Content Snippet */}
                 <div className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans line-clamp-10">
-                  {renderedBody || (
+                  {body || (
                     <span className="text-muted-foreground italic">
                       {"{{content}}"}
                     </span>
@@ -349,51 +363,7 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
 
               {/* Email Footer Note */}
               <div className="pt-4 border-t border-border/40 text-[10px] text-muted-foreground text-center">
-                This email was sent by {senderName} on behalf of{" "}
-                {testCampaign?.title || "Active Campaign"}.
-              </div>
-            </div>
-
-            {/* Test Simulation Controls */}
-            <div className="pt-2 border-t border-border/60 space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-foreground">
-                  <Layers className="size-3.5 text-muted-foreground" />
-                  Simulate live dynamic data:
-                </span>
-                {allDetectedVars.length > 0 && (
-                  <span className="font-mono text-[11px]">
-                    {allDetectedVars.length} variables detected
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  aria-label="Select Creator to simulate"
-                  value={selectedCreatorId}
-                  onChange={(e) => setSelectedCreatorId(e.target.value)}
-                  className="h-8 text-xs rounded-lg border border-input bg-background px-2 truncate"
-                >
-                  {creators.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name} ({c.platform})
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  aria-label="Select Campaign to simulate"
-                  value={selectedCampaignId}
-                  onChange={(e) => setSelectedCampaignId(e.target.value)}
-                  className="h-8 text-xs rounded-lg border border-input bg-background px-2 truncate"
-                >
-                  {campaigns.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
+                This email was sent by {senderName}.
               </div>
             </div>
           </div>
@@ -404,12 +374,9 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
           <div className="rounded-2xl border border-border/80 bg-card p-6 space-y-5 shadow-xs">
             {/* Sender Email */}
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="sender-email" className="text-xs font-semibold text-foreground">
-                  Sender email <span className="text-destructive">*</span>
-                </Label>
-                <HelpCircle className="size-3.5 text-muted-foreground opacity-70" />
-              </div>
+              <Label htmlFor="sender-email" className="text-xs font-semibold text-foreground">
+                Sender email <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sender-email"
                 value={senderEmail}
@@ -422,12 +389,9 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
 
             {/* Sender Name */}
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="sender-name" className="text-xs font-semibold text-foreground">
-                  Sender name <span className="text-destructive">*</span>
-                </Label>
-                <HelpCircle className="size-3.5 text-muted-foreground opacity-70" />
-              </div>
+              <Label htmlFor="sender-name" className="text-xs font-semibold text-foreground">
+                Sender name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="sender-name"
                 value={senderName}
@@ -440,14 +404,9 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
 
             {/* Subject Line (Matching Brevo Image 1) */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <Label htmlFor="subject-line" className="text-xs font-semibold text-foreground">
-                    Subject line <span className="text-destructive">*</span>
-                  </Label>
-                  <HelpCircle className="size-3.5 text-muted-foreground opacity-70" />
-                </div>
-              </div>
+              <Label htmlFor="subject-line" className="text-xs font-semibold text-foreground">
+                Subject line <span className="text-destructive">*</span>
+              </Label>
 
               <div className="rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring overflow-hidden">
                 <Input
@@ -460,15 +419,33 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
                   required
                 />
                 <div className="flex items-center justify-start gap-1 px-3 py-1.5 border-t border-border/50 bg-muted/20">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="size-7 p-0 text-muted-foreground hover:text-foreground"
-                    title="Emoji"
-                  >
-                    <Smile className="size-3.5" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="size-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-md"
+                        title="Insert emoji"
+                      >
+                        <Smile className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52 p-2 rounded-xl">
+                      <div className="grid grid-cols-6 gap-1">
+                        {EMAIL_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => insertSubjectToken(emoji)}
+                            className="size-7 rounded-md hover:bg-muted text-sm flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <VariablePicker
                     iconOnly
                     onSelectVariable={(v) => insertSubjectToken(v.tag)}
@@ -479,12 +456,9 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
 
             {/* Preview Text (Preheader, Matching Brevo Image 1) */}
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="preview-text" className="text-xs font-semibold text-foreground">
-                  Preview text
-                </Label>
-                <HelpCircle className="size-3.5 text-muted-foreground opacity-70" />
-              </div>
+              <Label htmlFor="preview-text" className="text-xs font-semibold text-foreground">
+                Preview text
+              </Label>
 
               <div className="rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring overflow-hidden">
                 <Input
@@ -496,15 +470,33 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
                   className="border-0 shadow-none focus-visible:ring-0 text-xs h-10 px-3"
                 />
                 <div className="flex items-center justify-start gap-1 px-3 py-1.5 border-t border-border/50 bg-muted/20">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="size-7 p-0 text-muted-foreground hover:text-foreground"
-                    title="Emoji"
-                  >
-                    <Smile className="size-3.5" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="size-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-md"
+                        title="Insert emoji"
+                      >
+                        <Smile className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52 p-2 rounded-xl">
+                      <div className="grid grid-cols-6 gap-1">
+                        {EMAIL_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => insertPreviewToken(emoji)}
+                            className="size-7 rounded-md hover:bg-muted text-sm flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <VariablePicker
                     iconOnly
                     onSelectVariable={(v) => insertPreviewToken(v.tag)}
@@ -512,9 +504,9 @@ export const TemplateEditorView: React.FC<TemplateEditorViewProps> = ({
                 </div>
               </div>
 
-              {/* Lightbulb hint (matching Brevo Image 1!) */}
+              {/* Lightbulb hint */}
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground pt-1">
-                <Lightbulb className="size-3 text-amber-500 shrink-0" />
+                <Lightbulb className="size-3 text-muted-foreground shrink-0" />
                 <span>Keep it under 35 characters to make sure it is not truncated.</span>
               </div>
             </div>

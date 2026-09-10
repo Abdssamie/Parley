@@ -12,7 +12,7 @@
 - **Auth:** Better Auth (@convex-dev/better-auth) with session cookies and credential auth
 - **AI models:** gpt-5.6-sol, gpt-4o-mini
 - **Started:** 2026-09-06T21:27:42Z
-- **Last updated:** 2026-09-08T16:55:00Z
+- **Last updated:** 2026-09-09T19:54:00Z
 
 ## Log
 
@@ -25,6 +25,7 @@ Implemented full-stack dynamic email template system with live data interpolatio
 - **Template Engine & Variable System (`src/lib/template-engine.ts`, `src/components/templates/VariablePicker.tsx`):**
   - Interpolation engine supporting tokens: creator fields (`name`, `handle`, `platform`, `niche`, `email`, `rate`), campaign fields (`title`, `budget`, `deliverables`, `niche`), and sender metadata (`name`, `email`, `brand`).
   - Single header `{ } Insert Variable` picker inserting dynamic tags at cursor position without UI clutter or duplicate controls.
+  - Removed all `e.g.` subtitle clutter from variable picker dropdown items, formatting each token as a clean single row with label and code badge.
 - **Robust Code Editor (`src/components/templates/FullPageTemplateEditor.tsx`):**
   - Integrated `@uiw/react-codemirror` with `@codemirror/lang-html` and `@codemirror/theme-one-dark`.
   - Replaced nested rounded cards and plain HTML `<textarea>` with full-canvas code editor chrome featuring line numbers, HTML/token syntax highlighting, status bar (token count, UTF-8, char count), and cursor-position insertion via `EditorView.dispatch`.
@@ -34,6 +35,11 @@ Implemented full-stack dynamic email template system with live data interpolatio
   - Replaced nested conditionals with an idiomatic `switch (view)` statement in `src/App.tsx`.
   - Fixed back button navigation so exiting template editing cleanly returns to `/templates` instead of falling back to `/`.
   - Eradicated sparkle icons in navigation and action toolbars in favor of purposeful `Bot` and `Zap` icons.
+- **Theme Neutrality & Functional UI Polish (`AGENTS.md`, `TemplateEditorView.tsx`, `VariablePicker.tsx`):**
+  - Standardized all icon colors across the template picker and editor to semantic `text-muted-foreground` and `text-primary`, eliminating arbitrary saturated colors (`text-blue-500`, `text-emerald-500`, `text-amber-500`, `bg-emerald-600`).
+  - Added strict theme preservation and no-dead-UI rules to `AGENTS.md`.
+  - Converted non-functional placeholder icons into working controls: replaced the dead 3-dots on Content with a working DropdownMenu (fullscreen editor, copy body, clear content); removed fake dropdown chevron from Save button; replaced dead Smile buttons with working Emoji Picker popovers; and removed non-functional HelpCircle clutter.
+  - Removed live simulation effect and controls (variables counter, creator/campaign selectors) from the template overview page; the Content card now renders raw template content and tokens (`{{creator.name}}`, `{{subject}}`, etc.) with standard email footer notes.
 
 ### 2026-09-07 - Sidebar User Profile & Account Dropdown Menu
 Streamlined dashboard navigation by migrating user account controls from the header to the persistent sidebar footer:

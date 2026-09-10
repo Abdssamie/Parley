@@ -108,7 +108,7 @@ export const FullPageTemplateEditor: React.FC<FullPageTemplateEditorProps> = ({
         {/* Left: Brand Icon + Editable Title */}
         <div className="flex items-center gap-3">
           {/* Brand Icon Mark (like Brevo's green circle 'B') */}
-          <div className="size-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs select-none">
+          <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-xs select-none">
             P
           </div>
 
