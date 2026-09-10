@@ -457,7 +457,7 @@ export const seedDemoData = mutation({
       createdAt: now - 86400000 * 3,
     });
 
-    await ctx.db.insert("campaigns", {
+    const campaign2Id = await ctx.db.insert("campaigns", {
       title: "Developer Community Outreach EU",
       status: "planning",
       budget: 8500,
@@ -582,22 +582,6 @@ export const seedDemoData = mutation({
         brandFitScore: 86,
         scrapedSummary: "Indie hacker building SaaS products in public and sharing design system architecture.",
         pastSponsors: ["Figma", "Tailwind", "LemonSqueezy"],
-      },
-      {
-        name: "Michele T",
-        status: "collected",
-        platform: "youtube",
-        email: "michele@techreview.eu",
-        country: "IT",
-        followers: 8000,
-        views: 3000,
-        engagementRate: 3.8,
-        estCost: 350,
-        bioLink: "https://michele-t.dev",
-        audienceNiche: "Cloud Computing & DevSecOps",
-        brandFitScore: 78,
-        scrapedSummary: "European DevOps engineer reviewing deployment tools and security utilities.",
-        pastSponsors: ["Snyk", "Cloudflare"],
       },
       {
         name: "Skill Leap AI",
@@ -1026,6 +1010,68 @@ export const seedDemoData = mutation({
       rawBody: "Thanks for reaching out, but our schedule is currently booked solid for Q4. Best of luck with the launch!",
     });
 
-    return { success: true, campaignId, creatorsCount: creatorSeeds.length };
+    // Seed threads for Campaign 2: Developer Community Outreach EU
+    await ctx.db.insert("threads", {
+      creatorId: insertedCreators["ThePrimeagen"],
+      campaignId: campaign2Id,
+      agentMailThreadId: "am_th_prime_eu_01",
+      stage: "review_required",
+      proposedFee: 750,
+      requestedRate: 900,
+      ruleTriggered: "rule_c",
+      sentimentScore: 7,
+      reasoning: "Rule C Hard Block: Rate requested ($900) exceeds EU benchmark cap ($750). Awaiting approval.",
+      agreedDeliverables: "1 Newsletter Feature + 1 Mid-roll mention",
+      humanOverride: false,
+      pendingApproval: true,
+      draftCounterOffer: "Hey Prime, thanks for the counter! While $900 is above our $750 cap, would $750 flat work for this segment? Let us know!",
+      lastActivityAt: now - 3600000 * 2,
+    });
+
+    await ctx.db.insert("threads", {
+      creatorId: insertedCreators["Software Dev"],
+      campaignId: campaign2Id,
+      agentMailThreadId: "am_th_softdev_eu_02",
+      stage: "pitched",
+      proposedFee: 450,
+      agreedDeliverables: "1 Newsletter Feature",
+      humanOverride: false,
+      pendingApproval: false,
+      lastActivityAt: now - 3600000 * 5,
+    });
+
+    await ctx.db.insert("threads", {
+      creatorId: insertedCreators["Matt Penny"],
+      campaignId: campaign2Id,
+      agentMailThreadId: "am_th_matt_eu_03",
+      stage: "negotiating",
+      proposedFee: 650,
+      requestedRate: 700,
+      ruleTriggered: "rule_b",
+      sentimentScore: 8,
+      reasoning: "Rule B Counter: Asked $700, autonomous counter at $650 sent.",
+      agreedDeliverables: "1 Newsletter Feature + Social mention",
+      humanOverride: false,
+      pendingApproval: false,
+      lastActivityAt: now - 3600000 * 1,
+    });
+
+    await ctx.db.insert("threads", {
+      creatorId: insertedCreators["Skill Leap AI"],
+      campaignId: campaign2Id,
+      agentMailThreadId: "am_th_skillleap_eu_04",
+      stage: "accepted",
+      proposedFee: 550,
+      requestedRate: 550,
+      ruleTriggered: "rule_a",
+      sentimentScore: 9,
+      contractLink: `https://parley.app/onboard/${campaign2Id}?creator=${insertedCreators["Skill Leap AI"]}`,
+      agreedDeliverables: "1 Newsletter Feature + 1 Mid-roll mention",
+      humanOverride: false,
+      pendingApproval: false,
+      lastActivityAt: now - 3600000 * 9,
+    });
+
+    return { success: true, campaignId, campaign2Id, creatorsCount: creatorSeeds.length };
   },
 });

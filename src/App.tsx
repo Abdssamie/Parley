@@ -20,13 +20,13 @@ import { DashboardOverview } from './components/DashboardOverview'
 import { NewCampaignModal } from './components/crm/campaigns/NewCampaignModal'
 import { NewCreatorModal } from './components/crm/creators/NewCreatorModal'
 import { PipelineBoard } from './components/PipelineBoard'
-import { CampaignMetrics } from './components/CampaignMetrics'
+import { Badge } from './components/ui/badge'
 import { ThreadDrawer } from './components/ThreadDrawer'
 import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
 import { TemplatesView } from './components/templates/TemplatesView'
 import type { EnrichedThread, PipelineStage } from './types'
-import { Zap, Plus, Settings as SettingsIcon, Sun, Moon } from 'lucide-react'
+import { Plus, Settings as SettingsIcon, Sun, Moon } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Select,
@@ -104,7 +104,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const [isNewCreatorOpen, setIsNewCreatorOpen] = useState(false)
-  const [isSimulatingGlobal, setIsSimulatingGlobal] = useState(false)
 
   // 4. Selected Thread Details (Live Subscription)
   const selectedThreadData = useQuery(
@@ -213,34 +212,7 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     }
   }
 
-  const handleGlobalSimulateReply = async () => {
-    if (threads.length === 0) return
-    setIsSimulatingGlobal(true)
-    try {
-      const candidate =
-        threads.find((t) => t.stage === 'review_required' || t.stage === 'negotiating') ||
-        threads.find((t) => t.stage === 'pitched') ||
-        threads[0]
 
-      if (candidate) {
-        const testReplies = [
-          `Hi team! Thanks for reaching out. We can definitely cover this in our upcoming deep dive. Our quote is $2,250 for the video and newsletter feature. Let us know!`,
-          `Sounds like a fantastic product! We would be thrilled to do this for $1,750. Please send over the contract and tracking links.`,
-          `Thanks for the pitch. Our standard sponsorship fee is $3,200 for dedicated integrations. Let me know if that works.`,
-        ]
-        const randomReply = testReplies[Math.floor(Math.random() * testReplies.length)]
-        await processInboundReplyAction({
-          threadId: candidate._id,
-          incomingBody: randomReply,
-        })
-        setSelectedThreadId(candidate._id)
-      }
-    } catch (err) {
-      console.error('Simulation error:', err)
-    } finally {
-      setIsSimulatingGlobal(false)
-    }
-  }
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -307,30 +279,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
                 </Select>
               )}
 
-            {currentView === 'pipeline' && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGlobalSimulateReply}
-                  disabled={isSimulatingGlobal || threads.length === 0}
-                  className="flex items-center gap-1.5 text-xs shadow-xs"
-                >
-                  <Zap className={`size-3.5 text-muted-foreground ${isSimulatingGlobal ? 'animate-spin' : ''}`} />
-                  <span>Simulate Reply</span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  onClick={() => setIsResearchOpen(true)}
-                  className="flex items-center gap-1.5 text-xs shadow-xs font-medium"
-                >
-                  <Plus className="size-3.5" />
-                  <span>Research & Pitch</span>
-                </Button>
-              </>
-            )}
-
             {/* Dark / Light theme toggle */}
             <Button
               variant="outline"
@@ -371,36 +319,69 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
           )}
 
           {currentView === 'pipeline' && (
-            <div className="space-y-6">
-              {/* Campaign Metrics Overview */}
-              <CampaignMetrics
-                campaign={activeCampaign}
-                metrics={metrics ?? null}
-                onToggleAutonomyMode={handleToggleAutonomyMode}
-              />
-
-              {/* Live Pipeline Kanban Board */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-foreground">Live Negotiation Stages</span>
-                  <span className="text-muted-foreground font-mono text-[11px]">Convex WebSocket Sync</span>
+            <div className="space-y-3">
+              {/* Compact Executive Pipeline Strip */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-2.5 shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-sm font-bold text-foreground truncate">
+                        {activeCampaign?.title ?? 'Campaign Workspace'}
+                      </h1>
+                      <Badge variant="outline" className="text-[10px] font-medium border-border">
+                        {activeCampaign?.targetNiche ?? 'Tech'}
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      Deliverables: {activeCampaign?.deliverableRequirements ?? '1 Video + 1 Post'}
+                    </span>
+                  </div>
                 </div>
 
-                <PipelineBoard
-                  threads={threads}
-                  onSelectThread={(id) => setSelectedThreadId(id)}
-                  onApproveCounter={handleApproveCounter}
-                  onSimulateReply={(id) => {
-                    const t = threads.find((th) => th._id === id)
-                    const fee = t ? (t.requestedRate ?? t.proposedFee) : 2000
-                    const simMsg =
-                      t?.stage === 'review_required'
-                        ? `We can offer $${Math.round(fee * 0.9)} if we keep only 1 video.`
-                        : `Sounds like a great plan! We can do $${fee} if we lock in dates this week.`
-                    void handleSimulateCreatorReply({ threadId: id, incomingBody: simMsg })
-                  }}
-                />
+                <div className="flex items-center gap-3 shrink-0">
+                  {/* Compact inline budget metrics */}
+                  <div className="text-right">
+                    <span className="text-[10px] text-muted-foreground uppercase block font-medium">Committed Spend</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      ${(metrics?.totalCommittedSpend ?? 0).toLocaleString()} / ${(activeCampaign?.budget ?? 2000).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <Separator orientation="vertical" className="h-6" />
+
+                  {/* Autonomy Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={handleToggleAutonomyMode}
+                    className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition-colors ${
+                      activeCampaign?.autonomyMode === 'full_autonomy'
+                        ? 'border-border bg-secondary text-foreground'
+                        : 'border-border/80 bg-background text-foreground hover:bg-secondary'
+                    }`}
+                    title="Toggle Autonomy Mode"
+                  >
+                    {activeCampaign?.autonomyMode === 'full_autonomy' ? 'Full Autonomy' : 'Human-in-the-Loop'}
+                  </button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => setIsResearchOpen(true)}
+                    className="h-8 text-xs flex items-center gap-1.5 shadow-xs font-medium"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Find & Pitch</span>
+                  </Button>
+                </div>
               </div>
+
+              {/* Kanban Board - FIRST THING */}
+              <PipelineBoard
+                threads={threads}
+                campaignId={campaignId}
+                campaignBudget={activeCampaign?.budget ?? 2000}
+                onSelectThread={(id) => setSelectedThreadId(id)}
+                onApproveCounter={handleApproveCounter}
+              />
             </div>
           )}
 

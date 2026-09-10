@@ -306,6 +306,41 @@ export const createInitialThread = mutation({
   },
 });
 
+export const createThreadInStage = mutation({
+  args: {
+    creatorId: v.id("creators"),
+    campaignId: v.id("campaigns"),
+    stage: v.union(
+      v.literal("discovered"),
+      v.literal("pitched"),
+      v.literal("negotiating"),
+      v.literal("review_required"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("ghosted")
+    ),
+    proposedFee: v.number(),
+    agreedDeliverables: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    const deliverables =
+      args.agreedDeliverables || campaign?.deliverableRequirements || "1 Dedicated Integration";
+    const agentMailThreadId = `am_th_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    return await ctx.db.insert("threads", {
+      creatorId: args.creatorId,
+      campaignId: args.campaignId,
+      agentMailThreadId,
+      stage: args.stage,
+      proposedFee: args.proposedFee,
+      agreedDeliverables: deliverables,
+      humanOverride: false,
+      pendingApproval: args.stage === "review_required",
+      lastActivityAt: Date.now(),
+    });
+  },
+});
+
 export const flagForHumanApproval = mutation({
   args: {
     threadId: v.id("threads"),
@@ -382,5 +417,48 @@ export const checkAndFlagGhostedThreads = mutation({
     return { ghostedCount };
   },
 });
+
+export const batchApproveStage = mutation({
+  args: {
+    campaignId: v.optional(v.id("campaigns")),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db.query("threads");
+    const allThreads = args.campaignId
+      ? await query.withIndex("by_campaign", (q) => q.eq("campaignId", args.campaignId!)).collect()
+      : await query.collect();
+
+    const pendingThreads = allThreads.filter((t) => t.stage === "review_required" || t.pendingApproval);
+    let approvedCount = 0;
+
+    for (const thread of pendingThreads) {
+      const messageBody =
+        thread.draftCounterOffer ||
+        "Hi team, thank you for your response. We are happy to proceed with this scope.";
+      const campaign = await ctx.db.get(thread.campaignId);
+
+      await ctx.db.insert("messages", {
+        threadId: thread._id,
+        sender: "agent",
+        senderAddress: "collab-agent@agentmail.to",
+        timestamp: Date.now(),
+        extractedIntent: "counter_offer_approved",
+        subject: `Re: Partnership Collaboration - ${campaign?.title ?? "Campaign"}`,
+        rawBody: messageBody,
+      });
+
+      await ctx.db.patch(thread._id, {
+        pendingApproval: false,
+        draftCounterOffer: undefined,
+        stage: "negotiating",
+        lastActivityAt: Date.now(),
+      });
+      approvedCount++;
+    }
+
+    return { approvedCount };
+  },
+});
+
 
 
