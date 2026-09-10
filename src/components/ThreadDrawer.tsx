@@ -10,6 +10,9 @@ import {
   ShieldAlert,
   Edit3,
   FileText,
+  ExternalLink,
+  XCircle,
+  Check,
 } from 'lucide-react'
 import {
   Sheet,
@@ -45,6 +48,7 @@ interface ThreadDrawerProps {
     threadId: Id<'threads'>
     incomingBody: string
   }) => Promise<void>
+  onWalkAway?: (threadId: Id<'threads'>) => Promise<void>
 }
 
 export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
@@ -55,6 +59,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   onApproveCounter,
   onSubmitHumanMessage,
   onSimulateCreatorReply,
+  onWalkAway,
 }) => {
   const [activeTab, setActiveTab] = useState<'messages' | 'override'>('messages')
   const [manualSubject, setManualSubject] = useState('')
@@ -71,11 +76,25 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   const campaign = thread.campaign
   const messages = thread.messages || []
   const budget = campaign?.budget ?? 2000
+  const reqRate = thread.requestedRate ?? thread.proposedFee
+  const delta = reqRate - budget
+  const pct = Math.round((delta / budget) * 100)
+  const isOverBudget = reqRate > budget
 
   const handleApprove = async () => {
     setIsSubmitting(true)
     try {
       await onApproveCounter(threadId)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleWalkAway = async () => {
+    if (!onWalkAway) return
+    setIsSubmitting(true)
+    try {
+      await onWalkAway(threadId)
     } finally {
       setIsSubmitting(false)
     }
@@ -113,81 +132,133 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
     }
   }
 
+  // Determine State Machine Step Progress
+  const isPitched = Boolean(messages.length > 0 || thread.stage !== 'discovered')
+  const hasInbound = messages.some((m) => m.sender === 'creator')
+  const hasExtractedIntent = Boolean(thread.ruleTriggered || thread.requestedRate !== undefined)
+  const isReviewGate = thread.stage === 'review_required' || thread.pendingApproval
+  const isAccepted = thread.stage === 'accepted'
+  const isDeclined = thread.stage === 'declined' || thread.stage === 'ghosted'
+
   return (
     <Sheet open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col bg-background">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col bg-background text-foreground border-l border-border">
         {/* Drawer Header */}
-        <div className="sticky top-0 z-20 border-b border-border bg-card p-6">
-          <SheetHeader className="space-y-1">
+        <div className="sticky top-0 z-20 border-b border-border bg-card p-5 space-y-4">
+          <SheetHeader className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Badge variant="outline" className="capitalize text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
-                Stage: {thread.stage}
-              </Badge>
-              <span className="text-xs text-slate-400">
-                Thread ID: {thread.agentMailThreadId}
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="capitalize text-xs font-semibold border-border bg-muted/60 text-foreground"
+                >
+                  Stage: {thread.stage.replace('_', ' ')}
+                </Badge>
+                {thread.ruleTriggered && (
+                  <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 h-5">
+                    {thread.ruleTriggered === 'rule_a' && 'Rule A (Green Light)'}
+                    {thread.ruleTriggered === 'rule_b' && 'Rule B (Counter <=125%)'}
+                    {thread.ruleTriggered === 'rule_c' && 'Rule C (Hard Block)'}
+                    {thread.ruleTriggered === 'rule_d' && 'Rule D (Declined)'}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-[11px] text-muted-foreground font-mono">
+                Thread: {thread.agentMailThreadId}
               </span>
             </div>
-            <SheetTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-between">
+
+            <SheetTitle className="text-xl font-bold text-foreground flex items-center justify-between">
               <span>{creator?.name ?? 'Creator Negotiation'}</span>
-              <span className="text-emerald-600 dark:text-emerald-400 text-lg">
-                ${thread.proposedFee.toLocaleString()}
+              <span className="text-lg font-semibold text-foreground">
+                ${reqRate.toLocaleString()}
               </span>
             </SheetTitle>
-            <SheetDescription className="text-xs text-slate-500 dark:text-slate-400">
-              {creator?.email} • Niche: {creator?.audienceNiche}
+
+            <SheetDescription className="text-xs text-muted-foreground">
+              {creator?.email} • Niche: {creator?.audienceNiche} • Platform: {creator?.platform}
             </SheetDescription>
           </SheetHeader>
 
-          {/* Quick Intelligence Summary */}
-          {creator?.scrapedSummary && (
-            <div className="mt-3 rounded-lg bg-muted/60 p-2.5 text-xs text-muted-foreground border border-border">
-              <div className="flex items-center gap-1.5 font-semibold text-foreground mb-1">
-                <Bot className="size-3.5 text-primary" />
-                <span>Creator Intelligence</span>
-              </div>
-              <p className="line-clamp-2 text-[11px] leading-relaxed">{creator.scrapedSummary}</p>
-              {creator.pastSponsors && creator.pastSponsors.length > 0 && (
-                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-500">
-                  <span>Verified Sponsors:</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">
-                    {creator.pastSponsors.join(', ')}
-                  </span>
-                </div>
-              )}
+          {/* State Machine Stepper */}
+          <div className="rounded-lg bg-muted/40 p-2.5 border border-border/70">
+            <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground mb-1.5 px-1">
+              <span>Deterministic Pipeline State Machine</span>
+              <span className="font-mono text-[10px]">OpenAI + AgentMail</span>
             </div>
-          )}
 
-          {/* Convex AI Agent Component Thread Badge */}
-          {thread.agentComponentThreadId && (
-            <div className="mt-2.5 flex items-center justify-between rounded-lg bg-indigo-50/80 px-2.5 py-1.5 text-xs text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-900/60">
-              <div className="flex items-center gap-1.5">
-                <Bot className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span className="font-medium text-[11px]">Convex AI Agent Thread:</span>
+            <div className="grid grid-cols-5 gap-1 text-[10px]">
+              <div
+                className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-center font-medium ${
+                  isPitched ? 'bg-secondary text-foreground' : 'bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                {isPitched && <Check className="h-2.5 w-2.5" />}
+                <span>1. Pitched</span>
               </div>
-              <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold truncate max-w-[180px]">
-                {thread.agentComponentThreadId}
-              </span>
+
+              <div
+                className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-center font-medium ${
+                  hasInbound ? 'bg-secondary text-foreground' : 'bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                {hasInbound && <Check className="h-2.5 w-2.5" />}
+                <span>2. Reply</span>
+              </div>
+
+              <div
+                className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-center font-medium ${
+                  hasExtractedIntent ? 'bg-secondary text-foreground' : 'bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                {hasExtractedIntent && <Check className="h-2.5 w-2.5" />}
+                <span>3. Parsed</span>
+              </div>
+
+              <div
+                className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-center font-medium ${
+                  isReviewGate
+                    ? 'bg-primary/20 text-foreground border border-border'
+                    : hasExtractedIntent
+                    ? 'bg-secondary text-foreground'
+                    : 'bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <span>4. Rules</span>
+              </div>
+
+              <div
+                className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-center font-medium ${
+                  isAccepted
+                    ? 'bg-secondary text-foreground font-semibold'
+                    : isDeclined
+                    ? 'bg-muted text-muted-foreground'
+                    : 'bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <span>5. {isAccepted ? 'Closed' : isDeclined ? 'Declined' : 'Decision'}</span>
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Tab Selector */}
-          <div className="mt-4 flex border-b border-slate-200 dark:border-slate-800">
+          <div className="flex border-b border-border">
             <button
               onClick={() => setActiveTab('messages')}
               className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors ${
                 activeTab === 'messages'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              Email Thread ({messages.length})
+              Conversation Thread ({messages.length})
             </button>
             <button
               onClick={() => setActiveTab('override')}
               className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-colors ${
                 activeTab === 'override'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Manual Human Override
@@ -196,33 +267,117 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
         </div>
 
         {/* Drawer Body */}
-        <div className="flex-1 p-6 space-y-4">
+        <div className="flex-1 p-5 space-y-4">
           {activeTab === 'messages' ? (
             <div className="space-y-4">
-              {/* Human Approval Required Action Box */}
-              {thread.pendingApproval && thread.draftCounterOffer && (
-                <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30">
-                  <div className="flex items-center gap-2 text-red-800 dark:text-red-300 font-bold text-xs">
-                    <ShieldAlert className="h-4 w-4 text-red-600 animate-pulse" />
-                    <span>Autonomous Counter-Offer Requires Human Approval</span>
+              {/* Structured Parsing & Constraint Evaluation Inspector Card */}
+              <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-xs font-semibold text-foreground">
+                      Structured Intent & Constraint Evaluation
+                    </h4>
                   </div>
-                  <p className="mt-1.5 text-xs text-red-900/80 dark:text-red-200 leading-relaxed">
-                    Creator requested ${thread.proposedFee.toLocaleString()} (Campaign budget: ${budget.toLocaleString()}).
+                  {thread.sentimentScore !== undefined && (
+                    <Badge variant="outline" className="text-[10px] border-border text-foreground">
+                      Sentiment: {thread.sentimentScore}/10
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="rounded-lg bg-muted/40 p-2 border border-border/60">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Intent</span>
+                    <span className="font-semibold text-foreground capitalize">
+                      {messages.find((m) => m.sender === 'creator')?.extractedIntent?.replace(/_/g, ' ') ||
+                        'Inbound Discussion'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-2 border border-border/60">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Rate vs Cap</span>
+                    <span className="font-semibold text-foreground">
+                      ${reqRate.toLocaleString()}{' '}
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        ({isOverBudget ? `+${pct}%` : `cap: $${budget}`})
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-2 border border-border/60">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Rule Triggered</span>
+                    <span className="font-semibold text-foreground">
+                      {thread.ruleTriggered ? thread.ruleTriggered.toUpperCase() : 'Standard Flow'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-2 border border-border/60">
+                    <span className="text-[10px] text-muted-foreground uppercase block">Timeline</span>
+                    <span className="font-semibold text-foreground truncate block">
+                      {thread.timelineConstraint || 'Q4 Target'}
+                    </span>
+                  </div>
+                </div>
+
+                {thread.reasoning && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed italic bg-muted/20 p-2 rounded-md border border-border/40">
+                    "{thread.reasoning}"
+                  </p>
+                )}
+
+                {thread.contractLink && (
+                  <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-2 border border-border">
+                    <div className="flex items-center gap-1.5 text-xs text-foreground">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      <span className="font-medium">Contract & Onboarding Active</span>
+                    </div>
+                    <a
+                      href={thread.contractLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-foreground inline-flex items-center hover:underline"
+                    >
+                      <span>Open Link</span>
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Human Approval Gate (Rule C Hard Block or HITL Active) */}
+              {(thread.pendingApproval || thread.stage === 'review_required') && thread.draftCounterOffer && (
+                <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-foreground font-semibold text-xs">
+                      <ShieldAlert className="h-4 w-4 shrink-0 text-foreground" />
+                      <span>Human Approval Gate — Action Required</span>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                      Pending Operator
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Creator requested ${reqRate.toLocaleString()} (Campaign budget: ${budget.toLocaleString()}).
                     OpenAI generated the following counter-offer:
                   </p>
-                  <div className="mt-3 rounded-lg bg-white p-3 text-xs text-slate-800 shadow-sm border border-red-200 dark:bg-slate-900 dark:text-slate-200 dark:border-red-950">
-                    <p className="italic">{thread.draftCounterOffer}</p>
+
+                  <div className="rounded-lg bg-card p-3 text-xs text-foreground shadow-xs border border-border">
+                    <p className="italic leading-relaxed whitespace-pre-line">{thread.draftCounterOffer}</p>
                   </div>
-                  <div className="mt-3 flex gap-2">
+
+                  <div className="flex flex-wrap gap-2 pt-1">
                     <Button
                       size="sm"
                       onClick={handleApprove}
                       disabled={isSubmitting}
-                      className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold gap-1.5 h-8"
+                      className="text-xs font-semibold gap-1.5 h-8"
                     >
                       <CheckCircle className="h-3.5 w-3.5" />
                       Approve & Dispatch via AgentMail
                     </Button>
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -231,19 +386,37 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                         setManualFee(budget)
                         setActiveTab('override')
                       }}
-                      className="text-xs h-8"
+                      className="text-xs h-8 border-border text-foreground hover:bg-muted"
                     >
-                      <Edit3 className="h-3.5 w-3.5 mr-1" />
+                      <Edit3 className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                       Edit Offer
                     </Button>
+
+                    {onWalkAway && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleWalkAway}
+                        disabled={isSubmitting}
+                        className="text-xs h-8 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                        Walk Away
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Messages Timeline */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground pb-1">
+                  <span className="font-semibold text-foreground">Message History</span>
+                  <span>{messages.length} email{messages.length === 1 ? '' : 's'} recorded</span>
+                </div>
+
                 {messages.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-slate-400">
+                  <div className="py-10 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
                     No messages recorded yet in this thread.
                   </div>
                 ) : (
@@ -254,55 +427,53 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                     return (
                       <div
                         key={msg._id}
-                        className={`rounded-xl border p-4 shadow-sm transition-all ${
+                        className={`rounded-xl border p-3.5 shadow-xs transition-all ${
                           isAgent
-                            ? 'border-indigo-100 bg-indigo-50/50 dark:border-indigo-900/40 dark:bg-indigo-950/20 ml-4'
+                            ? 'border-border bg-muted/30 ml-4'
                             : isHuman
-                            ? 'border-emerald-100 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20 ml-4'
-                            : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 mr-4'
+                            ? 'border-border bg-secondary/40 ml-4'
+                            : 'border-border bg-card mr-4'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-2 dark:border-slate-800/60">
+                        <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2 mb-2">
                           <div className="flex items-center gap-2">
-                            <div
-                              className={`flex h-6 w-6 items-center justify-center rounded-full text-white text-xs ${
-                                isAgent
-                                  ? 'bg-indigo-600'
-                                  : isHuman
-                                  ? 'bg-emerald-600'
-                                  : 'bg-slate-700'
-                              }`}
-                            >
-                              {isAgent ? <Bot className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-foreground text-xs">
+                              {isAgent ? (
+                                <Bot className="h-3.5 w-3.5" />
+                              ) : isHuman ? (
+                                <User className="h-3.5 w-3.5" />
+                              ) : (
+                                <User className="h-3.5 w-3.5" />
+                              )}
                             </div>
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            <span className="text-xs font-semibold text-foreground">
                               {isAgent
-                                ? 'Parley Bot'
+                                ? 'Parley Agent'
                                 : isHuman
                                 ? 'Human Reviewer'
                                 : creator?.name ?? 'Creator'}
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-muted-foreground">
                               &lt;{msg.senderAddress}&gt;
                             </span>
                           </div>
 
                           <div className="flex items-center gap-2">
                             {msg.extractedIntent && (
-                              <Badge variant="outline" className="text-[9px] uppercase tracking-wider text-slate-500">
+                              <Badge variant="outline" className="text-[9px] uppercase tracking-wider text-muted-foreground border-border">
                                 {msg.extractedIntent.replace(/_/g, ' ')}
                               </Badge>
                             )}
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-muted-foreground font-mono">
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         </div>
 
-                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <div className="text-xs font-medium text-foreground mb-1">
                           {msg.subject}
                         </div>
-                        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400 whitespace-pre-line">
+                        <p className="text-xs leading-relaxed text-muted-foreground whitespace-pre-line">
                           {msg.rawBody}
                         </p>
                       </div>
@@ -311,69 +482,89 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                 )}
               </div>
 
-              {/* Simulation Sandbox for Hackathon Judges */}
-              <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-slate-100/60 p-4 dark:border-slate-800 dark:bg-slate-900/40">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                  <span>Interactive Testing Sandbox (Judge / Demo Controls)</span>
+              {/* Interactive Testing Sandbox (Deterministic State Machine Scenarios) */}
+              <div className="mt-6 rounded-xl border border-dashed border-border bg-card/60 p-4 space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>State Machine Testing Sandbox (Judge / Demo Controls)</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
-                  Click a simulated creator email below to observe real-time OpenAI fee extraction, budget policy enforcement, and autonomous response drafting:
+                <p className="text-[11px] text-muted-foreground">
+                  Test deterministic rules engine branching by simulating creator replies:
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Scenario 1: Rule A */}
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={isSubmitting}
                     onClick={() =>
                       handleSimulate(
-                        `Hi Parley team! Thanks for the pitch. For 1 dedicated YouTube video and promotion, our quote is $2,750. Let me know if this works.`
+                        `Sounds great! $1,800 works for us. Please send over the onboarding agreement and contract link to lock it in.`
                       )
                     }
-                    className="h-auto py-2 text-left flex flex-col items-start border-amber-300 bg-white hover:bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-300"
+                    className="h-auto py-2 px-2.5 text-left flex flex-col items-start border-border bg-card hover:bg-muted text-foreground"
                   >
-                    <span className="text-[11px] font-bold">Counter: $2,750</span>
-                    <span className="text-[9px] text-slate-500">Exceeds Cap $\rightarrow$ Flags for Review</span>
+                    <span className="text-[11px] font-semibold">Rule A (Green Light: $1,800)</span>
+                    <span className="text-[9px] text-muted-foreground">Rate &lt;= Budget $\to$ Stage: Accepted + Contract Link</span>
                   </Button>
 
+                  {/* Scenario 2: Rule B */}
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={isSubmitting}
                     onClick={() =>
                       handleSimulate(
-                        `Hey! That sounds like a great partnership. We can do $1,800 for the video and social thread. Send over the agreement and we will lock it in!`
+                        `Thanks for the pitch! We can definitely do this tutorial video for $2,250. Let me know if that works.`
                       )
                     }
-                    className="h-auto py-2 text-left flex flex-col items-start border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-300"
+                    className="h-auto py-2 px-2.5 text-left flex flex-col items-start border-border bg-card hover:bg-muted text-foreground"
                   >
-                    <span className="text-[11px] font-bold">Accept: $1,800</span>
-                    <span className="text-[9px] text-slate-500">Within Cap $\rightarrow$ Auto-Accepted</span>
+                    <span className="text-[11px] font-semibold">Rule B (Counter: $2,250)</span>
+                    <span className="text-[9px] text-muted-foreground">Rate &lt;= 125% $\to$ Auto-Drafts Counter Anchored to Cap</span>
                   </Button>
 
+                  {/* Scenario 3: Rule C */}
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={isSubmitting}
                     onClick={() =>
                       handleSimulate(
-                        `Thanks for considering me, but I am fully booked through the next quarter and will have to pass. Best of luck with the campaign!`
+                        `Hi Parley team, our standard media kit rate for this tier is $3,200 firm. We cannot accommodate lower quotes.`
                       )
                     }
-                    className="h-auto py-2 text-left flex flex-col items-start border-red-300 bg-white hover:bg-red-50 text-red-900 dark:border-red-900 dark:bg-slate-900 dark:text-red-300"
+                    className="h-auto py-2 px-2.5 text-left flex flex-col items-start border-border bg-card hover:bg-muted text-foreground"
                   >
-                    <span className="text-[11px] font-bold">Decline Opportunity</span>
-                    <span className="text-[9px] text-slate-500">Polite Decline $\rightarrow$ Stage: Declined</span>
+                    <span className="text-[11px] font-semibold">Rule C (Hard Block: $3,200)</span>
+                    <span className="text-[9px] text-muted-foreground">Rate &gt; 125% $\to$ Stage: Review Required (Approval Gate)</span>
+                  </Button>
+
+                  {/* Scenario 4: Rule D */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSubmitting}
+                    onClick={() =>
+                      handleSimulate(
+                        `Thanks for thinking of me, but our production schedule is completely booked through Q4 so I must decline.`
+                      )
+                    }
+                    className="h-auto py-2 px-2.5 text-left flex flex-col items-start border-border bg-card hover:bg-muted text-foreground"
+                  >
+                    <span className="text-[11px] font-semibold">Rule D (Creator Declines)</span>
+                    <span className="text-[9px] text-muted-foreground">Decline intent $\to$ Stage: Declined</span>
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            /* Manual Override Tab */
+            /* Manual Human Override Form */
             <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div className="rounded-lg bg-indigo-50/70 p-3 text-xs text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-900">
-                <p className="font-semibold mb-0.5">Human-in-the-Loop Control</p>
-                <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
+              <div className="rounded-lg bg-muted/60 p-3 text-xs text-foreground border border-border">
+                <p className="font-semibold mb-0.5">Human-in-the-Loop Override</p>
+                <p className="text-[11px] text-muted-foreground">
                   Sending a manual message dispatches the email via AgentMail and flags the thread as human-supervised.
                 </p>
               </div>
@@ -381,7 +572,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
               {/* Template Pre-population Toolbar */}
               <div className="flex items-center justify-between p-2 rounded-md bg-muted/40 border border-border/60">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <FileText className="size-3.5 text-primary" />
+                  <FileText className="size-3.5 text-muted-foreground" />
                   <span>Email Template:</span>
                 </div>
                 <select
@@ -391,7 +582,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                     const selected = emailTemplates?.find((t) => t._id === e.target.value)
                     if (selected) {
                       const context = {
-                        creator: creator ? { ...creator, estCost: manualFee ?? thread.proposedFee ?? creator.estCost } : null,
+                        creator: creator ? { ...creator, estCost: manualFee ?? reqRate } : null,
                         campaign,
                         sender: { name: 'Partnerships Team', email: 'team@parley.app' },
                         brandName: 'Parley',
@@ -400,7 +591,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                       setManualBody(renderTemplate(selected.body, context))
                     }
                   }}
-                  className="h-8 text-xs rounded-md border border-input bg-background px-2.5 max-w-[220px] truncate cursor-pointer"
+                  className="h-8 text-xs rounded-md border border-input bg-background px-2.5 max-w-[220px] truncate cursor-pointer text-foreground"
                 >
                   <option value="" disabled>Load from template...</option>
                   {(emailTemplates || []).map((t) => (
@@ -450,8 +641,10 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                   <Input
                     id="fee"
                     type="number"
-                    value={manualFee ?? thread.proposedFee}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualFee(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                    value={manualFee ?? reqRate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setManualFee(e.target.value ? parseInt(e.target.value, 10) : undefined)
+                    }
                     className="h-9 text-xs"
                   />
                 </div>
@@ -461,14 +654,18 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                   <select
                     id="stage"
                     value={manualStage ?? thread.stage}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setManualStage(e.target.value as PipelineStage)}
-                    className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setManualStage(e.target.value as PipelineStage)
+                    }
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs text-foreground"
                   >
                     <option value="discovered">Discovered</option>
                     <option value="pitched">Pitched</option>
                     <option value="negotiating">Negotiating</option>
+                    <option value="review_required">Review Required</option>
                     <option value="accepted">Accepted</option>
                     <option value="declined">Declined</option>
+                    <option value="ghosted">Ghosted</option>
                   </select>
                 </div>
               </div>
@@ -487,7 +684,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                   type="submit"
                   size="sm"
                   disabled={isSubmitting || !manualBody.trim()}
-                  className="bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold gap-1.5"
+                  className="text-xs font-semibold gap-1.5"
                 >
                   <Send className="h-3.5 w-3.5" />
                   Send Manual Email

@@ -90,8 +90,8 @@ http.route({
         );
       }
 
-      // 3. Trigger Convex AI Agent Component to process inbound email
-      const agentResult = await ctx.runAction(api.agent.processInboundWithAgent, {
+      // 3. Trigger Convex deterministic state machine action (processInboundReply)
+      const pipelineResult = await ctx.runAction(api.pipeline.processInboundReply, {
         threadId: targetThreadId,
         incomingBody: incomingBody || "Incoming message received via AgentMail.",
         senderAddress: fromStr,
@@ -102,8 +102,9 @@ http.route({
           success: true,
           processed: true,
           threadId: targetThreadId,
-          agentThreadId: agentResult.agentThreadId,
-          toolCalls: agentResult.toolCalls,
+          rule: pipelineResult.rule,
+          status: pipelineResult.status,
+          analysis: pipelineResult.analysis,
           timestamp: Date.now(),
         }),
         {

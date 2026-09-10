@@ -17,6 +17,10 @@ export default defineSchema({
     brief: v.string(),
     targetNiche: v.string(),
     deliverableRequirements: v.string(),
+    autonomyMode: v.optional(
+      v.union(v.literal("full_autonomy"), v.literal("human_in_the_loop"))
+    ),
+    contractTemplateUrl: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_status", ["status"])
@@ -65,16 +69,36 @@ export default defineSchema({
       v.literal("discovered"),
       v.literal("pitched"),
       v.literal("negotiating"),
+      v.literal("review_required"),
       v.literal("accepted"),
-      v.literal("declined")
+      v.literal("declined"),
+      v.literal("ghosted")
     ),
     proposedFee: v.number(),
+    requestedRate: v.optional(v.number()),
     agreedDeliverables: v.string(),
+    proposedDeliverables: v.optional(v.array(v.string())),
+    timelineConstraint: v.optional(v.string()),
+    sentimentScore: v.optional(v.number()),
+    ruleTriggered: v.optional(
+      v.union(
+        v.literal("rule_a"),
+        v.literal("rule_b"),
+        v.literal("rule_c"),
+        v.literal("rule_d")
+      )
+    ),
+    contractLink: v.optional(v.string()),
+    autonomyMode: v.optional(
+      v.union(v.literal("full_autonomy"), v.literal("human_in_the_loop"))
+    ),
+    reasoning: v.optional(v.string()),
     humanOverride: v.boolean(),
     pendingApproval: v.boolean(),
     draftCounterOffer: v.optional(v.string()),
     agentComponentThreadId: v.optional(v.string()),
     lastActivityAt: v.number(),
+    lastInboundAt: v.optional(v.number()),
   })
     .index("by_campaign", ["campaignId"])
     .index("by_stage", ["stage"])

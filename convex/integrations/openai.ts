@@ -1,13 +1,21 @@
 "use node";
 
-export interface NegotiationAnalysis {
-  extractedIntent: string;
+export interface ExtractedNegotiationIntent {
+  intent: "counter_offer" | "accept" | "decline" | "question";
+  requestedRate: number | null;
+  proposedDeliverables: string[];
+  timelineConstraint: string | null;
+  sentimentScore: number; // 1-10 (flags hostility/ghosting risk)
+  counterOfferDraft?: string;
+  reasoning?: string;
+}
+
+export interface NegotiationAnalysis extends ExtractedNegotiationIntent {
   proposedFee: number;
   withinBudget: boolean;
   needsApproval: boolean;
-  recommendedStage: "negotiating" | "accepted" | "declined";
+  recommendedStage: "negotiating" | "review_required" | "accepted" | "declined";
   draftReply: string;
-  reasoning: string;
 }
 
 export async function analyzeAndDraftNegotiation(params: {
@@ -34,23 +42,16 @@ Creator's Incoming Email Message:
 ${params.incomingMessage}
 """
 
-Analyze the creator's message.
-1. Extract their proposed fee as an integer number (in USD). If not mentioned, estimate or retain previous.
-2. Determine if it is within our $${params.budget} budget.
-3. If they ask more than $${params.budget}, draft a polite counter-offer aligned with $${params.budget} or ask for revised deliverables, and set needsApproval=true.
-4. If they accept or offer <= $${params.budget}, set needsApproval=false and draft a warm confirmation.
-5. If they strictly decline, set recommendedStage="declined".
+Analyze the creator's incoming email and return a Structured Output JSON with:
+1. "intent": "counter_offer" | "accept" | "decline" | "question"
+2. "requestedRate": creator's proposed fee as an integer number in USD, or null if no rate mentioned.
+3. "proposedDeliverables": string array of deliverables mentioned or agreed by the creator.
+4. "timelineConstraint": string description of dates/timelines mentioned (e.g. "Next month", "October 14th"), or null.
+5. "sentimentScore": integer 1-10 where 10 is eager/delighted, 7 is standard professional, 4 is hesitant/friction, 1-2 is hostile/refusal.
+6. "draftReply": a professional, courteous reply from the Parley team. If rate <= $${params.budget}, confirm enthusiastically and include next onboarding steps. If rate > $${params.budget} but <= $${Math.round(params.budget * 1.25)}, propose a counter-offer anchored to $${params.budget} or adjust deliverables. If rate > $${Math.round(params.budget * 1.25)}, write a polite counter or note requiring review.
+7. "reasoning": 1-2 sentences summarizing negotiation dynamics and risk.
 
-Respond ONLY with valid JSON in this structure:
-{
-  "extractedIntent": "rate_counter | agreement | decline | general_inquiry",
-  "proposedFee": number,
-  "withinBudget": boolean,
-  "needsApproval": boolean,
-  "recommendedStage": "negotiating | accepted | declined",
-  "draftReply": "contextual reply email text",
-  "reasoning": "short explanation of strategy"
-}`;
+Respond ONLY with a valid JSON object matching this schema.`;
 
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -59,10 +60,10 @@ Respond ONLY with valid JSON in this structure:
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || "gpt-5.6-sol",
+          model: process.env.OPENAI_MODEL || "gpt-4o-mini",
           messages: [{ role: "user", content: prompt }],
           response_format: { type: "json_object" },
-          temperature: 0.3,
+          temperature: 0.2,
         }),
       });
 
@@ -72,8 +73,46 @@ Respond ONLY with valid JSON in this structure:
         };
         const rawJson = data.choices[0]?.message?.content;
         if (rawJson) {
-          const parsed = JSON.parse(rawJson) as NegotiationAnalysis;
-          return parsed;
+          const parsed = JSON.parse(rawJson) as {
+            intent: "counter_offer" | "accept" | "decline" | "question";
+            requestedRate: number | null;
+            proposedDeliverables: string[];
+            timelineConstraint: string | null;
+            sentimentScore: number;
+            draftReply: string;
+            reasoning: string;
+          };
+
+          const effectiveFee = parsed.requestedRate ?? params.previousProposedFee;
+          const withinBudget = effectiveFee <= params.budget;
+          const exceeds125 = effectiveFee > params.budget * 1.25;
+          const needsApproval = exceeds125 || (parsed.sentimentScore ?? 7) <= 4;
+
+          let recommendedStage: "negotiating" | "review_required" | "accepted" | "declined" = "negotiating";
+          if (parsed.intent === "decline") {
+            recommendedStage = "declined";
+          } else if (withinBudget && parsed.intent === "accept") {
+            recommendedStage = "accepted";
+          } else if (needsApproval) {
+            recommendedStage = "review_required";
+          }
+
+          return {
+            intent: parsed.intent || "counter_offer",
+            requestedRate: parsed.requestedRate,
+            proposedDeliverables: Array.isArray(parsed.proposedDeliverables)
+              ? parsed.proposedDeliverables
+              : [params.deliverableRequirements],
+            timelineConstraint: parsed.timelineConstraint ?? null,
+            sentimentScore: typeof parsed.sentimentScore === "number" ? parsed.sentimentScore : 7,
+            proposedFee: effectiveFee,
+            withinBudget,
+            needsApproval,
+            recommendedStage,
+            draftReply: parsed.draftReply,
+            reasoning: parsed.reasoning,
+            counterOfferDraft: parsed.draftReply,
+          };
         }
       }
     } catch (err) {
@@ -81,57 +120,134 @@ Respond ONLY with valid JSON in this structure:
     }
   }
 
-  // Simulated fallback negotiation logic
+  // Resilient heuristic parser fallback
   const lower = params.incomingMessage.toLowerCase();
   const dollarMatch = params.incomingMessage.match(/\$([0-9,]+)/);
-  let parsedFee = dollarMatch
+  const parsedFee: number | null = dollarMatch
     ? parseInt(dollarMatch[1].replace(/,/g, ""), 10)
-    : params.previousProposedFee || 1500;
+    : null;
 
-  if (lower.includes("pass") || lower.includes("not interested") || lower.includes("decline")) {
+  // 1. Decline detection
+  if (
+    lower.includes("pass") ||
+    lower.includes("not interested") ||
+    lower.includes("decline") ||
+    lower.includes("cannot commit") ||
+    lower.includes("fully booked")
+  ) {
     return {
-      extractedIntent: "decline",
+      intent: "decline",
+      requestedRate: parsedFee,
+      proposedDeliverables: [],
+      timelineConstraint: null,
+      sentimentScore: 3,
       proposedFee: 0,
       withinBudget: true,
       needsApproval: false,
       recommendedStage: "declined",
-      draftReply: `Hi ${params.creatorName}, completely understand. Thanks for letting us know, and we'll keep you in mind for future campaigns! Best, Parley Team.`,
-      reasoning: "Creator declined the sponsorship opportunity.",
+      draftReply: `Hi ${params.creatorName},\n\nCompletely understand! Thank you for letting us know promptly. We'll keep you in mind for future campaigns when our schedules might align better.\n\nBest regards,\nParley Sponsorships Team`,
+      reasoning: "Creator stated they cannot participate or passed on the opportunity.",
     };
   }
 
-  if (lower.includes("sounds great") || lower.includes("deal") || lower.includes("send the contract") || lower.includes("happy to proceed")) {
+  // 2. Acceptance detection
+  if (
+    lower.includes("sounds great") ||
+    lower.includes("deal") ||
+    lower.includes("send the contract") ||
+    lower.includes("happy to proceed") ||
+    lower.includes("lock it in") ||
+    (parsedFee !== null && parsedFee <= params.budget && lower.includes("can do"))
+  ) {
+    const finalFee = parsedFee ? Math.min(parsedFee, params.budget) : params.previousProposedFee;
     return {
-      extractedIntent: "agreement",
-      proposedFee: Math.min(parsedFee, params.budget),
+      intent: "accept",
+      requestedRate: finalFee,
+      proposedDeliverables: [params.deliverableRequirements],
+      timelineConstraint: "Target launch window",
+      sentimentScore: 9,
+      proposedFee: finalFee,
       withinBudget: true,
       needsApproval: false,
       recommendedStage: "accepted",
-      draftReply: `Fantastic, ${params.creatorName}! We're thrilled to partner on ${params.campaignTitle}. I have locked in the agreed fee of $${Math.min(parsedFee, params.budget).toLocaleString()} for ${params.deliverableRequirements}. Our legal team will dispatch the agreement shortly.`,
-      reasoning: "Creator accepted the proposal within budget parameters.",
+      draftReply: `Hi ${params.creatorName},\n\nFantastic news! We are thrilled to partner on "${params.campaignTitle}". I have locked in the agreed fee of $${finalFee.toLocaleString()} for ${params.deliverableRequirements}.\n\nOur onboarding and contract link is ready here: https://parley.app/onboard?creator=${encodeURIComponent(params.creatorName)}\n\nLooking forward to working together!\n\nBest regards,\nParley Team`,
+      reasoning: "Creator agreed to terms within campaign budget parameters.",
     };
   }
 
-  const exceedsBudget = parsedFee > params.budget;
-  if (exceedsBudget) {
+  // 3. Question / Inquiry detection
+  if (
+    (lower.includes("could you tell me") ||
+      lower.includes("what is the timeline") ||
+      lower.includes("how does payment work")) &&
+    parsedFee === null
+  ) {
     return {
-      extractedIntent: "rate_counter_exceeds_budget",
-      proposedFee: parsedFee,
+      intent: "question",
+      requestedRate: null,
+      proposedDeliverables: [params.deliverableRequirements],
+      timelineConstraint: null,
+      sentimentScore: 7,
+      proposedFee: params.previousProposedFee,
+      withinBudget: true,
+      needsApproval: false,
+      recommendedStage: "negotiating",
+      draftReply: `Hi ${params.creatorName},\n\nGreat question! Our campaign timeline targets deliverables within the upcoming cycle, and payments are settled on net-15 upon asset approval. Does that align with your schedule?\n\nBest,\nParley Team`,
+      reasoning: "Creator inquired about campaign details without submitting a counter rate.",
+    };
+  }
+
+  // 4. Counter-Offer detection
+  const requested = parsedFee ?? params.previousProposedFee;
+  const isHardBlock = requested > params.budget * 1.25;
+
+  if (isHardBlock) {
+    return {
+      intent: "counter_offer",
+      requestedRate: requested,
+      proposedDeliverables: [params.deliverableRequirements],
+      timelineConstraint: null,
+      sentimentScore: 5,
+      proposedFee: requested,
       withinBudget: false,
       needsApproval: true,
-      recommendedStage: "negotiating",
-      draftReply: `Hi ${params.creatorName}, thanks for getting back to us. While $${parsedFee.toLocaleString()} is above our budget of $${params.budget.toLocaleString()} for this specific milestone, we'd love to make this work. Would you consider $${params.budget.toLocaleString()} or alternatively adjusting deliverables to 1 dedicated segment? Let us know what you think!`,
-      reasoning: `Creator requested $${parsedFee.toLocaleString()}, which exceeds campaign budget of $${params.budget.toLocaleString()}. Autonomous counter drafted and flagged for human approval.`,
+      recommendedStage: "review_required",
+      draftReply: `Hi ${params.creatorName},\n\nThank you for sharing your rate card. $${requested.toLocaleString()} is considerably above our campaign budget cap of $${params.budget.toLocaleString()} for this milestone.\n\nCould we explore doing a single focused segment, or anchor closer to $${params.budget.toLocaleString()}? Let us know what might be feasible.\n\nBest regards,\nParley Partnerships Team`,
+      reasoning: `Requested fee of $${requested.toLocaleString()} exceeds 125% of campaign budget ($${params.budget.toLocaleString()}). Flagged for Human Approval Gate.`,
+      counterOfferDraft: `Hi ${params.creatorName},\n\nThank you for sharing your rate card. $${requested.toLocaleString()} is considerably above our campaign budget cap of $${params.budget.toLocaleString()} for this milestone.\n\nCould we explore doing a single focused segment, or anchor closer to $${params.budget.toLocaleString()}? Let us know what might be feasible.\n\nBest regards,\nParley Partnerships Team`,
     };
   }
 
+  // Rule B: Rate > maxBudget but within 125%
+  if (requested > params.budget) {
+    return {
+      intent: "counter_offer",
+      requestedRate: requested,
+      proposedDeliverables: [params.deliverableRequirements],
+      timelineConstraint: null,
+      sentimentScore: 7,
+      proposedFee: requested,
+      withinBudget: false,
+      needsApproval: false,
+      recommendedStage: "negotiating",
+      draftReply: `Hi ${params.creatorName},\n\nThanks for getting back to us! While $${requested.toLocaleString()} is slightly above our allocated cap of $${params.budget.toLocaleString()}, we really want to make this collaboration happen.\n\nWould you be open to $${params.budget.toLocaleString()} flat, or alternatively adjusting the scope (e.g. 1 dedicated segment)? Let us know your thoughts!\n\nBest,\nParley Partnerships Team`,
+      reasoning: `Requested $${requested.toLocaleString()} is within 125% of budget. Drafted counter-offer anchored to $${params.budget.toLocaleString()}.`,
+      counterOfferDraft: `Hi ${params.creatorName},\n\nThanks for getting back to us! While $${requested.toLocaleString()} is slightly above our allocated cap of $${params.budget.toLocaleString()}, we really want to make this collaboration happen.\n\nWould you be open to $${params.budget.toLocaleString()} flat, or alternatively adjusting the scope (e.g. 1 dedicated segment)? Let us know your thoughts!\n\nBest,\nParley Partnerships Team`,
+    };
+  }
+
+  // Within budget counter or proposal
   return {
-    extractedIntent: "rate_proposal_within_budget",
-    proposedFee: parsedFee,
+    intent: "counter_offer",
+    requestedRate: requested,
+    proposedDeliverables: [params.deliverableRequirements],
+    timelineConstraint: null,
+    sentimentScore: 8,
+    proposedFee: requested,
     withinBudget: true,
     needsApproval: false,
     recommendedStage: "negotiating",
-    draftReply: `Hi ${params.creatorName}, thanks for your rate card! $${parsedFee.toLocaleString()} fits nicely within our parameters for ${params.campaignTitle}. Could you confirm your earliest publication date for ${params.deliverableRequirements}?`,
-    reasoning: `Creator proposed $${parsedFee.toLocaleString()}, which is within the $${params.budget.toLocaleString()} budget. Generated confirmation inquiry.`,
+    draftReply: `Hi ${params.creatorName},\n\nThanks for the reply! $${requested.toLocaleString()} works nicely within our parameters for "${params.campaignTitle}". Could you confirm your earliest available production date for ${params.deliverableRequirements}?\n\nBest regards,\nParley Team`,
+    reasoning: `Creator proposed $${requested.toLocaleString()}, which is within the $${params.budget.toLocaleString()} budget.`,
   };
 }

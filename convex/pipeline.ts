@@ -221,8 +221,10 @@ export const processInboundReply = action({
     }
 
     const senderEmail = args.senderAddress || thread.creator.email;
+    const maxBudget = thread.campaign.budget;
+    const isFullAutonomy = thread.campaign.autonomyMode === "full_autonomy";
 
-    // 2. Log Inbound Message
+    // 2. Log Inbound Message to messages table
     await ctx.runMutation(api.messages.addMessage, {
       threadId: thread._id,
       sender: "creator",
@@ -232,28 +234,139 @@ export const processInboundReply = action({
       rawBody: args.incomingBody,
     });
 
-    // 3. OpenAI Negotiation Analysis
+    // 3. Structured Parsing with OpenAI
     const analysis = await analyzeAndDraftNegotiation({
       campaignTitle: thread.campaign.title,
-      budget: thread.campaign.budget,
+      budget: maxBudget,
       deliverableRequirements: thread.campaign.deliverableRequirements,
       creatorName: thread.creator.name,
       incomingMessage: args.incomingBody,
       previousProposedFee: thread.proposedFee,
     });
 
-    // 4. Act Based on Guardrail Decision
-    if (analysis.needsApproval) {
-      // Flag for Human Marketing Review
+    const requestedRate = analysis.requestedRate ?? analysis.proposedFee;
+    const contractLink = `https://parley.app/onboard/${thread.campaignId}?creator=${thread.creatorId}`;
+
+    // 4. Constraint Evaluation (Convex Rules Engine)
+
+    // Rule D: Creator strictly declined
+    if (analysis.intent === "decline") {
+      await ctx.runMutation(api.threads.updateStage, {
+        id: thread._id,
+        stage: "declined",
+        ruleTriggered: "rule_d",
+        proposedFee: 0,
+      });
+
+      if (isFullAutonomy) {
+        await sendAgentMail({
+          to: thread.creator.email,
+          subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
+          body: analysis.draftReply,
+          threadId: thread.agentMailThreadId,
+        });
+
+        await ctx.runMutation(api.messages.addMessage, {
+          threadId: thread._id,
+          sender: "agent",
+          senderAddress: "parley@agentmail.to",
+          extractedIntent: "decline_acknowledged",
+          subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
+          rawBody: analysis.draftReply,
+        });
+      }
+
+      return {
+        rule: "rule_d",
+        status: "declined",
+        analysis,
+      };
+    }
+
+    // Rule A (Green Light): requestedRate <= maxBudget OR intent is accept
+    if (analysis.intent === "accept" || requestedRate <= maxBudget) {
+      const agreedFee = Math.min(requestedRate, maxBudget);
+
+      if (isFullAutonomy) {
+        // Auto-send acceptance + contract link
+        await sendAgentMail({
+          to: thread.creator.email,
+          subject: `Confirmed: Partnership Collaboration - ${thread.campaign.title}`,
+          body: analysis.draftReply,
+          threadId: thread.agentMailThreadId,
+        });
+
+        await ctx.runMutation(api.messages.addMessage, {
+          threadId: thread._id,
+          sender: "agent",
+          senderAddress: "parley@agentmail.to",
+          extractedIntent: "auto_accept_rule_a",
+          subject: `Confirmed: Partnership Collaboration - ${thread.campaign.title}`,
+          rawBody: analysis.draftReply,
+        });
+
+        await ctx.runMutation(api.threads.updateStage, {
+          id: thread._id,
+          stage: "accepted",
+          proposedFee: agreedFee,
+          ruleTriggered: "rule_a",
+          contractLink,
+        });
+
+        return {
+          rule: "rule_a",
+          status: "auto_accepted_dispatched",
+          analysis,
+        };
+      } else {
+        // Human-in-the-loop: mark as accepted with pending draft confirmation
+        await ctx.runMutation(api.threads.flagForHumanApproval, {
+          threadId: thread._id,
+          draftCounterOffer: analysis.draftReply,
+          proposedFee: agreedFee,
+          requestedRate,
+          stage: "accepted",
+          ruleTriggered: "rule_a",
+          sentimentScore: analysis.sentimentScore,
+          reasoning: "Rule A Green Light: Rate within budget cap. Draft confirmation prepared with contract link.",
+        });
+
+        return {
+          rule: "rule_a",
+          status: "accepted_pending_draft",
+          analysis,
+        };
+      }
+    }
+
+    // Rule C (Hard Block): requestedRate > 125% of budget OR hostile sentiment
+    const isHardBlock = requestedRate > maxBudget * 1.25 || analysis.sentimentScore <= 4;
+    if (isHardBlock) {
+      // Hard Block: Always flag for review_required (Human Approval Gate)
       await ctx.runMutation(api.threads.flagForHumanApproval, {
         threadId: thread._id,
         draftCounterOffer: analysis.draftReply,
-        proposedFee: analysis.proposedFee,
+        proposedFee: requestedRate,
+        requestedRate,
+        stage: "review_required",
+        ruleTriggered: "rule_c",
+        sentimentScore: analysis.sentimentScore,
+        reasoning: `Rule C Hard Block: Requested fee ($${requestedRate.toLocaleString()}) exceeds 125% of budget ($${maxBudget.toLocaleString()}) or flagged sentiment risk (${analysis.sentimentScore}/10).`,
       });
 
-      return { status: "pending_human_approval", analysis };
-    } else {
-      // Send Autonomous Counter / Acceptance
+      return {
+        rule: "rule_c",
+        status: "review_required",
+        analysis,
+      };
+    }
+
+    // Rule B (Counter-Offer): requestedRate > maxBudget but <= 125% of budget
+    // Counter-offer anchored to maxBudget
+    const counterFee = maxBudget;
+
+    if (isFullAutonomy) {
+      // Auto-send counter offer immediately
       await sendAgentMail({
         to: thread.creator.email,
         subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
@@ -261,24 +374,45 @@ export const processInboundReply = action({
         threadId: thread.agentMailThreadId,
       });
 
-      // Log Agent Outbound Message
       await ctx.runMutation(api.messages.addMessage, {
         threadId: thread._id,
         sender: "agent",
         senderAddress: "parley@agentmail.to",
-        extractedIntent: analysis.extractedIntent,
+        extractedIntent: "counter_offer_rule_b",
         subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
         rawBody: analysis.draftReply,
       });
 
-      // Update Thread Stage
       await ctx.runMutation(api.threads.updateStage, {
         id: thread._id,
-        stage: analysis.recommendedStage,
-        proposedFee: analysis.proposedFee,
+        stage: "negotiating",
+        proposedFee: counterFee,
+        ruleTriggered: "rule_b",
       });
 
-      return { status: "autonomous_reply_sent", analysis };
+      return {
+        rule: "rule_b",
+        status: "counter_offer_dispatched",
+        analysis,
+      };
+    } else {
+      // Human-in-the-loop: draft sits in pending approval
+      await ctx.runMutation(api.threads.flagForHumanApproval, {
+        threadId: thread._id,
+        draftCounterOffer: analysis.draftReply,
+        proposedFee: counterFee,
+        requestedRate,
+        stage: "negotiating",
+        ruleTriggered: "rule_b",
+        sentimentScore: analysis.sentimentScore,
+        reasoning: `Rule B Counter-Offer: Rate ($${requestedRate.toLocaleString()}) is within 125% of cap. Counter-offer drafted anchored to $${counterFee.toLocaleString()}.`,
+      });
+
+      return {
+        rule: "rule_b",
+        status: "counter_draft_pending_approval",
+        analysis,
+      };
     }
   },
 });
@@ -723,13 +857,17 @@ export const seedDemoData = mutation({
       rawBody: "Hi Marcus, loved your recent design system breakdowns! We'd love to sponsor your next newsletter with a $1,600 budget allocation. Let us know if you're open to partnering.",
     });
 
-    // Negotiating (Flagged for Human Approval)
+    // Review Required (Rule C Hard Block: $2,500 > 125% of $2,000 cap)
     const alexThreadId = await ctx.db.insert("threads", {
       creatorId: insertedCreators["Alex Rivera"],
       campaignId,
       agentMailThreadId: "am_th_alex_03",
-      stage: "negotiating",
+      stage: "review_required",
       proposedFee: 2500,
+      requestedRate: 2500,
+      ruleTriggered: "rule_c",
+      sentimentScore: 6,
+      reasoning: "Rule C Hard Block: Rate requested ($2,500) exceeds 125% of allocated cap ($2,000). Awaiting marketing director review.",
       agreedDeliverables: "1 Dedicated YouTube Video + 1 X/Twitter Thread",
       humanOverride: false,
       pendingApproval: true,
@@ -755,14 +893,62 @@ export const seedDemoData = mutation({
       rawBody: "Hey Parley team! Our standard rate for a dedicated deep dive episode plus social distribution is $2,500. Let me know if that works within your Q4 budget.",
     });
 
-    // Accepted
+    // Negotiating (Rule B Counter-Offer Drafted within 125% cap)
+    const jackThreadId = await ctx.db.insert("threads", {
+      creatorId: insertedCreators["Jack Roberts"],
+      campaignId,
+      agentMailThreadId: "am_th_jack_06",
+      stage: "negotiating",
+      proposedFee: 2000,
+      requestedRate: 2200,
+      ruleTriggered: "rule_b",
+      sentimentScore: 8,
+      reasoning: "Rule B Counter: Creator asked $2,200 (within 125% of $2,000). Autonomous counter anchored to $2,000 dispatched.",
+      agreedDeliverables: "1 Dedicated YouTube Video",
+      humanOverride: false,
+      pendingApproval: false,
+      lastActivityAt: now - 3600000 * 3,
+    });
+    await ctx.db.insert("messages", {
+      threadId: jackThreadId,
+      sender: "agent",
+      senderAddress: "parley@agentmail.to",
+      timestamp: now - 86400000 * 1.5,
+      extractedIntent: "initial_outreach_pitch",
+      subject: "Partnership Collaboration: Q4 AI Productivity Suite Launch",
+      rawBody: "Hi Jack, loved your Next.js deep dive! We'd love to partner for an upcoming feature.",
+    });
+    await ctx.db.insert("messages", {
+      threadId: jackThreadId,
+      sender: "creator",
+      senderAddress: "jack@robertsmedia.co",
+      timestamp: now - 3600000 * 5,
+      extractedIntent: "counter_offer",
+      subject: "Re: Partnership Collaboration: Q4 AI Productivity Suite Launch",
+      rawBody: "Hey team! Can we do $2,200 for the dedicated tutorial video? Let me know.",
+    });
+    await ctx.db.insert("messages", {
+      threadId: jackThreadId,
+      sender: "agent",
+      senderAddress: "parley@agentmail.to",
+      timestamp: now - 3600000 * 3,
+      extractedIntent: "counter_offer_rule_b",
+      subject: "Re: Partnership Collaboration: Q4 AI Productivity Suite Launch",
+      rawBody: "Hi Jack, thanks for following up! While $2,200 is slightly above our cap, we can do $2,000 flat if that works for you. Let us know!",
+    });
+
+    // Accepted (Rule A Green Light: <= budget)
     const elenaThreadId = await ctx.db.insert("threads", {
       creatorId: insertedCreators["Elena Rostova"],
       campaignId,
       agentMailThreadId: "am_th_elena_04",
       stage: "accepted",
       proposedFee: 1750,
-      agreedDeliverables: "1 Dedicated YouTube Video + 1 X/Twitter Thread",
+      requestedRate: 1750,
+      ruleTriggered: "rule_a",
+      sentimentScore: 9,
+      contractLink: `https://parley.app/onboard/${campaignId}?creator=${insertedCreators["Elena Rostova"]}`,
+      agreedDeliverables: "1 Newsletter Feature + Social Amplification",
       humanOverride: false,
       pendingApproval: false,
       lastActivityAt: now - 3600000 * 12,
@@ -792,7 +978,29 @@ export const seedDemoData = mutation({
       timestamp: now - 3600000 * 12,
       extractedIntent: "agreement_confirmed",
       subject: "Re: Partnership Collaboration: Q4 AI Productivity Suite Launch",
-      rawBody: "Confirmed! $1,750 is locked in. We will dispatch the creative assets and tracking links by Friday.",
+      rawBody: "Confirmed! $1,750 is locked in. Our contract and onboarding link is active: https://parley.app/onboard/elena",
+    });
+
+    // Ghosted (No reply for > 5 days)
+    const mikeyThreadId = await ctx.db.insert("threads", {
+      creatorId: insertedCreators["Mikey West"],
+      campaignId,
+      agentMailThreadId: "am_th_mikey_07",
+      stage: "ghosted",
+      proposedFee: 1500,
+      agreedDeliverables: "1 Dedicated Stream Segment",
+      humanOverride: false,
+      pendingApproval: false,
+      lastActivityAt: now - 86400000 * 6,
+    });
+    await ctx.db.insert("messages", {
+      threadId: mikeyThreadId,
+      sender: "agent",
+      senderAddress: "parley@agentmail.to",
+      timestamp: now - 86400000 * 6,
+      extractedIntent: "initial_outreach_pitch",
+      subject: "Partnership Collaboration: Q4 AI Productivity Suite Launch",
+      rawBody: "Hi Mikey, we would love to sponsor a segment on your upcoming livestream!",
     });
 
     // Declined
@@ -801,6 +1009,7 @@ export const seedDemoData = mutation({
       campaignId,
       agentMailThreadId: "am_th_devbro_05",
       stage: "declined",
+      ruleTriggered: "rule_d",
       proposedFee: 0,
       agreedDeliverables: "None",
       humanOverride: false,

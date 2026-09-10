@@ -114,12 +114,14 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
 
   // 5. Mutations and Actions
   const approveDraftMutation = useMutation(api.threads.approveDraftCounter)
+  const walkAwayMutation = useMutation(api.threads.walkAwayThread)
   const submitHumanMessageMutation = useMutation(api.threads.submitHumanMessage)
   const updateCampaignMutation = useMutation(api.campaigns.update)
+  const setAutonomyModeMutation = useMutation(api.campaigns.setAutonomyMode)
   const researchAndPitchAction = useAction(api.pipeline.autonomousResearchAndPitch)
   const scrapeLeadsAction = useAction(api.pipeline.scrapeLeadsForCampaign)
   const scrapeLeadFromUrlAction = useAction(api.pipeline.scrapeLeadFromUrl)
-  const processInboundWithAgentAction = useAction(api.agent.processInboundWithAgent)
+  const processInboundReplyAction = useAction(api.pipeline.processInboundReply)
 
   // 6. Derived State during Render
   const threads: EnrichedThread[] = rawThreads ?? []
@@ -130,6 +132,30 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
       await approveDraftMutation({ threadId })
     } catch (err) {
       console.error('Failed to approve counter offer:', err)
+    }
+  }
+
+  const handleWalkAway = async (threadId: Id<'threads'>) => {
+    try {
+      await walkAwayMutation({ threadId })
+    } catch (err) {
+      console.error('Failed to walk away from thread:', err)
+    }
+  }
+
+  const handleToggleAutonomyMode = async () => {
+    if (!campaignId || !activeCampaign) return
+    const nextMode =
+      activeCampaign.autonomyMode === 'full_autonomy'
+        ? 'human_in_the_loop'
+        : 'full_autonomy'
+    try {
+      await setAutonomyModeMutation({
+        campaignId,
+        autonomyMode: nextMode,
+      })
+    } catch (err) {
+      console.error('Failed to toggle autonomy mode:', err)
     }
   }
 
@@ -165,7 +191,7 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     threadId: Id<'threads'>
     incomingBody: string
   }) => {
-    await processInboundWithAgentAction({
+    await processInboundReplyAction({
       threadId: params.threadId,
       incomingBody: params.incomingBody,
     })
@@ -192,18 +218,18 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     setIsSimulatingGlobal(true)
     try {
       const candidate =
-        threads.find((t) => t.stage === 'negotiating') ||
+        threads.find((t) => t.stage === 'review_required' || t.stage === 'negotiating') ||
         threads.find((t) => t.stage === 'pitched') ||
         threads[0]
 
       if (candidate) {
         const testReplies = [
-          `Hi team! Thanks for reaching out. We can definitely cover this in our upcoming deep dive. Our quote is $2,400 for the video and newsletter feature. Let us know!`,
-          `Sounds like a fantastic product! We would be thrilled to do this for $1,650. Please send over the contract and tracking links.`,
-          `Thanks for the proposal! We are interested in partnering. Can we do $2,200 with 1 YouTube segment + 2 social posts?`,
+          `Hi team! Thanks for reaching out. We can definitely cover this in our upcoming deep dive. Our quote is $2,250 for the video and newsletter feature. Let us know!`,
+          `Sounds like a fantastic product! We would be thrilled to do this for $1,750. Please send over the contract and tracking links.`,
+          `Thanks for the pitch. Our standard sponsorship fee is $3,200 for dedicated integrations. Let me know if that works.`,
         ]
         const randomReply = testReplies[Math.floor(Math.random() * testReplies.length)]
-        await processInboundWithAgentAction({
+        await processInboundReplyAction({
           threadId: candidate._id,
           incomingBody: randomReply,
         })
@@ -347,7 +373,11 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
           {currentView === 'pipeline' && (
             <div className="space-y-6">
               {/* Campaign Metrics Overview */}
-              <CampaignMetrics campaign={activeCampaign} metrics={metrics ?? null} />
+              <CampaignMetrics
+                campaign={activeCampaign}
+                metrics={metrics ?? null}
+                onToggleAutonomyMode={handleToggleAutonomyMode}
+              />
 
               {/* Live Pipeline Kanban Board */}
               <div className="space-y-3 pt-2">
@@ -360,7 +390,15 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
                   threads={threads}
                   onSelectThread={(id) => setSelectedThreadId(id)}
                   onApproveCounter={handleApproveCounter}
-                  onSimulateReply={(id) => setSelectedThreadId(id)}
+                  onSimulateReply={(id) => {
+                    const t = threads.find((th) => th._id === id)
+                    const fee = t ? (t.requestedRate ?? t.proposedFee) : 2000
+                    const simMsg =
+                      t?.stage === 'review_required'
+                        ? `We can offer $${Math.round(fee * 0.9)} if we keep only 1 video.`
+                        : `Sounds like a great plan! We can do $${fee} if we lock in dates this week.`
+                    void handleSimulateCreatorReply({ threadId: id, incomingBody: simMsg })
+                  }}
                 />
               </div>
             </div>
@@ -401,6 +439,7 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
         onApproveCounter={handleApproveCounter}
         onSubmitHumanMessage={handleSubmitHumanMessage}
         onSimulateCreatorReply={handleSimulateCreatorReply}
+        onWalkAway={handleWalkAway}
       />
 
       {/* Find Leads Modal */}

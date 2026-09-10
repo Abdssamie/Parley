@@ -94,6 +94,10 @@ export const update = mutation({
     brief: v.optional(v.string()),
     targetNiche: v.optional(v.string()),
     deliverableRequirements: v.optional(v.string()),
+    autonomyMode: v.optional(
+      v.union(v.literal("full_autonomy"), v.literal("human_in_the_loop"))
+    ),
+    contractTemplateUrl: v.optional(v.string()),
     status: v.optional(
       v.union(
         v.literal("active"),
@@ -110,6 +114,22 @@ export const update = mutation({
     );
     await ctx.db.patch(id, cleanUpdates);
     return id;
+  },
+});
+
+export const setAutonomyMode = mutation({
+  args: {
+    campaignId: v.id("campaigns"),
+    autonomyMode: v.union(
+      v.literal("full_autonomy"),
+      v.literal("human_in_the_loop")
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.campaignId, {
+      autonomyMode: args.autonomyMode,
+    });
+    return { success: true, autonomyMode: args.autonomyMode };
   },
 });
 
@@ -155,19 +175,24 @@ export const getMetrics = query({
       discovered: 0,
       pitched: 0,
       negotiating: 0,
+      review_required: 0,
       accepted: 0,
       declined: 0,
+      ghosted: 0,
     };
 
     let totalCommittedSpend = 0;
     let pendingApprovals = 0;
 
     for (const thread of threads) {
-      stageCounts[thread.stage] = (stageCounts[thread.stage] || 0) + 1;
+      const st = thread.stage as keyof typeof stageCounts;
+      if (stageCounts[st] !== undefined) {
+        stageCounts[st] += 1;
+      }
       if (thread.stage === "accepted") {
         totalCommittedSpend += thread.proposedFee;
       }
-      if (thread.pendingApproval) {
+      if (thread.pendingApproval || thread.stage === "review_required") {
         pendingApprovals += 1;
       }
     }

@@ -107,7 +107,15 @@ export const updateNegotiationStageTool = createTool({
   description: "Updates the CRM negotiation stage in Convex for the creator thread.",
   inputSchema: z.object({
     threadId: z.string().describe("Convex thread ID"),
-    stage: z.enum(["discovered", "pitched", "negotiating", "accepted", "declined"]),
+    stage: z.enum([
+      "discovered",
+      "pitched",
+      "negotiating",
+      "review_required",
+      "accepted",
+      "declined",
+      "ghosted",
+    ]),
     proposedFee: z.number().optional().describe("Final or updated fee in USD"),
   }),
   execute: async (ctx, { threadId, stage, proposedFee }) => {
@@ -295,7 +303,7 @@ Analyze the incoming message.
           threadId: thread._id,
           sender: "agent",
           senderAddress: "parley@agentmail.to",
-          extractedIntent: analysis.extractedIntent,
+          extractedIntent: analysis.intent,
           subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
           rawBody: analysis.draftReply,
         });
