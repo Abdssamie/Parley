@@ -222,7 +222,6 @@ export const processInboundReply = action({
 
     const senderEmail = args.senderAddress || thread.creator.email;
     const maxBudget = thread.campaign.budget;
-    const isFullAutonomy = thread.campaign.autonomyMode === "full_autonomy";
 
     // 2. Log Inbound Message to messages table
     await ctx.runMutation(api.messages.addMessage, {
@@ -245,40 +244,26 @@ export const processInboundReply = action({
     });
 
     const requestedRate = analysis.requestedRate ?? analysis.proposedFee;
-    const contractLink = `https://parley.app/onboard/${thread.campaignId}?creator=${thread.creatorId}`;
 
-    // 4. Constraint Evaluation (Convex Rules Engine)
+    // 4. Constraint Evaluation (Convex Rules Engine - Always Human-in-the-Loop)
+    // Once an email is replied, it requires human intervention before any outbound response is dispatched.
 
     // Rule D: Creator strictly declined
     if (analysis.intent === "decline") {
-      await ctx.runMutation(api.threads.updateStage, {
-        id: thread._id,
-        stage: "declined",
-        ruleTriggered: "rule_d",
+      await ctx.runMutation(api.threads.flagForHumanApproval, {
+        threadId: thread._id,
+        draftCounterOffer: analysis.draftReply,
         proposedFee: 0,
+        requestedRate,
+        stage: "review_required",
+        ruleTriggered: "rule_d",
+        sentimentScore: analysis.sentimentScore,
+        reasoning: "Creator indicated decline or unwillingness to collaborate. Draft acknowledgment awaiting human review.",
       });
-
-      if (isFullAutonomy) {
-        await sendAgentMail({
-          to: thread.creator.email,
-          subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
-          body: analysis.draftReply,
-          threadId: thread.agentMailThreadId,
-        });
-
-        await ctx.runMutation(api.messages.addMessage, {
-          threadId: thread._id,
-          sender: "agent",
-          senderAddress: "parley@agentmail.to",
-          extractedIntent: "decline_acknowledged",
-          subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
-          rawBody: analysis.draftReply,
-        });
-      }
 
       return {
         rule: "rule_d",
-        status: "declined",
+        status: "declined_pending_review",
         analysis,
       };
     }
@@ -287,62 +272,27 @@ export const processInboundReply = action({
     if (analysis.intent === "accept" || requestedRate <= maxBudget) {
       const agreedFee = Math.min(requestedRate, maxBudget);
 
-      if (isFullAutonomy) {
-        // Auto-send acceptance + contract link
-        await sendAgentMail({
-          to: thread.creator.email,
-          subject: `Confirmed: Partnership Collaboration - ${thread.campaign.title}`,
-          body: analysis.draftReply,
-          threadId: thread.agentMailThreadId,
-        });
+      await ctx.runMutation(api.threads.flagForHumanApproval, {
+        threadId: thread._id,
+        draftCounterOffer: analysis.draftReply,
+        proposedFee: agreedFee,
+        requestedRate,
+        stage: "review_required",
+        ruleTriggered: "rule_a",
+        sentimentScore: analysis.sentimentScore,
+        reasoning: "Rule A Green Light: Rate within budget cap. Draft confirmation prepared with contract link awaiting human approval.",
+      });
 
-        await ctx.runMutation(api.messages.addMessage, {
-          threadId: thread._id,
-          sender: "agent",
-          senderAddress: "parley@agentmail.to",
-          extractedIntent: "auto_accept_rule_a",
-          subject: `Confirmed: Partnership Collaboration - ${thread.campaign.title}`,
-          rawBody: analysis.draftReply,
-        });
-
-        await ctx.runMutation(api.threads.updateStage, {
-          id: thread._id,
-          stage: "accepted",
-          proposedFee: agreedFee,
-          ruleTriggered: "rule_a",
-          contractLink,
-        });
-
-        return {
-          rule: "rule_a",
-          status: "auto_accepted_dispatched",
-          analysis,
-        };
-      } else {
-        // Human-in-the-loop: mark as accepted with pending draft confirmation
-        await ctx.runMutation(api.threads.flagForHumanApproval, {
-          threadId: thread._id,
-          draftCounterOffer: analysis.draftReply,
-          proposedFee: agreedFee,
-          requestedRate,
-          stage: "accepted",
-          ruleTriggered: "rule_a",
-          sentimentScore: analysis.sentimentScore,
-          reasoning: "Rule A Green Light: Rate within budget cap. Draft confirmation prepared with contract link.",
-        });
-
-        return {
-          rule: "rule_a",
-          status: "accepted_pending_draft",
-          analysis,
-        };
-      }
+      return {
+        rule: "rule_a",
+        status: "accepted_pending_draft",
+        analysis,
+      };
     }
 
     // Rule C (Hard Block): requestedRate > 125% of budget OR hostile sentiment
     const isHardBlock = requestedRate > maxBudget * 1.25 || analysis.sentimentScore <= 4;
     if (isHardBlock) {
-      // Hard Block: Always flag for review_required (Human Approval Gate)
       await ctx.runMutation(api.threads.flagForHumanApproval, {
         threadId: thread._id,
         draftCounterOffer: analysis.draftReply,
@@ -365,55 +315,22 @@ export const processInboundReply = action({
     // Counter-offer anchored to maxBudget
     const counterFee = maxBudget;
 
-    if (isFullAutonomy) {
-      // Auto-send counter offer immediately
-      await sendAgentMail({
-        to: thread.creator.email,
-        subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
-        body: analysis.draftReply,
-        threadId: thread.agentMailThreadId,
-      });
+    await ctx.runMutation(api.threads.flagForHumanApproval, {
+      threadId: thread._id,
+      draftCounterOffer: analysis.draftReply,
+      proposedFee: counterFee,
+      requestedRate,
+      stage: "review_required",
+      ruleTriggered: "rule_b",
+      sentimentScore: analysis.sentimentScore,
+      reasoning: `Rule B Counter-Offer: Rate ($${requestedRate.toLocaleString()}) is within 125% of cap. Counter-offer drafted anchored to $${counterFee.toLocaleString()} awaiting human approval.`,
+    });
 
-      await ctx.runMutation(api.messages.addMessage, {
-        threadId: thread._id,
-        sender: "agent",
-        senderAddress: "parley@agentmail.to",
-        extractedIntent: "counter_offer_rule_b",
-        subject: `Re: Partnership Collaboration: ${thread.campaign.title}`,
-        rawBody: analysis.draftReply,
-      });
-
-      await ctx.runMutation(api.threads.updateStage, {
-        id: thread._id,
-        stage: "negotiating",
-        proposedFee: counterFee,
-        ruleTriggered: "rule_b",
-      });
-
-      return {
-        rule: "rule_b",
-        status: "counter_offer_dispatched",
-        analysis,
-      };
-    } else {
-      // Human-in-the-loop: draft sits in pending approval
-      await ctx.runMutation(api.threads.flagForHumanApproval, {
-        threadId: thread._id,
-        draftCounterOffer: analysis.draftReply,
-        proposedFee: counterFee,
-        requestedRate,
-        stage: "negotiating",
-        ruleTriggered: "rule_b",
-        sentimentScore: analysis.sentimentScore,
-        reasoning: `Rule B Counter-Offer: Rate ($${requestedRate.toLocaleString()}) is within 125% of cap. Counter-offer drafted anchored to $${counterFee.toLocaleString()}.`,
-      });
-
-      return {
-        rule: "rule_b",
-        status: "counter_draft_pending_approval",
-        analysis,
-      };
-    }
+    return {
+      rule: "rule_b",
+      status: "counter_draft_pending_approval",
+      analysis,
+    };
   },
 });
 

@@ -20,7 +20,6 @@ import { DashboardOverview } from './components/DashboardOverview'
 import { NewCampaignModal } from './components/crm/campaigns/NewCampaignModal'
 import { NewCreatorModal } from './components/crm/creators/NewCreatorModal'
 import { PipelineBoard } from './components/PipelineBoard'
-import { Badge } from './components/ui/badge'
 import { ThreadDrawer } from './components/ThreadDrawer'
 import { ResearchModal } from './components/ResearchModal'
 import { CampaignSettingsModal } from './components/CampaignSettingsModal'
@@ -116,7 +115,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
   const walkAwayMutation = useMutation(api.threads.walkAwayThread)
   const submitHumanMessageMutation = useMutation(api.threads.submitHumanMessage)
   const updateCampaignMutation = useMutation(api.campaigns.update)
-  const setAutonomyModeMutation = useMutation(api.campaigns.setAutonomyMode)
   const researchAndPitchAction = useAction(api.pipeline.autonomousResearchAndPitch)
   const scrapeLeadsAction = useAction(api.pipeline.scrapeLeadsForCampaign)
   const scrapeLeadFromUrlAction = useAction(api.pipeline.scrapeLeadFromUrl)
@@ -142,21 +140,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
     }
   }
 
-  const handleToggleAutonomyMode = async () => {
-    if (!campaignId || !activeCampaign) return
-    const nextMode =
-      activeCampaign.autonomyMode === 'full_autonomy'
-        ? 'human_in_the_loop'
-        : 'full_autonomy'
-    try {
-      await setAutonomyModeMutation({
-        campaignId,
-        autonomyMode: nextMode,
-      })
-    } catch (err) {
-      console.error('Failed to toggle autonomy mode:', err)
-    }
-  }
 
   const handleSubmitHumanMessage = async (params: {
     threadId: Id<'threads'>
@@ -258,27 +241,6 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Campaign switcher: visible on pipeline & settings where campaign context matters */}
-            {(currentView === 'pipeline' || currentView === 'settings') &&
-              campaigns &&
-              campaigns.length > 1 && (
-                <Select
-                  value={campaignId ?? ''}
-                  onValueChange={(id) => setSelectedCampaignId(id as Id<'campaigns'>)}
-                >
-                  <SelectTrigger className="h-8 text-xs w-[180px] shadow-xs">
-                    <SelectValue placeholder="Select campaign" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {campaigns.map((c) => (
-                      <SelectItem key={c._id} value={c._id} className="text-xs">
-                        {c.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
             {/* Dark / Light theme toggle */}
             <Button
               variant="outline"
@@ -320,48 +282,42 @@ export const App: React.FC<AppProps> = ({ initialView = 'dashboard' }) => {
 
           {currentView === 'pipeline' && (
             <div className="space-y-3">
-              {/* Compact Executive Pipeline Strip */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-2.5 shadow-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-sm font-bold text-foreground truncate">
-                        {activeCampaign?.title ?? 'Campaign Workspace'}
-                      </h1>
-                      <Badge variant="outline" className="text-[10px] font-medium border-border">
-                        {activeCampaign?.targetNiche ?? 'Tech'}
-                      </Badge>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground truncate">
-                      Deliverables: {activeCampaign?.deliverableRequirements ?? '1 Video + 1 Post'}
-                    </span>
-                  </div>
+              {/* Executive Pipeline Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+                <div className="flex items-center min-w-0">
+                  {campaigns && campaigns.length > 1 ? (
+                    <Select
+                      value={campaignId ?? ''}
+                      onValueChange={(id) => setSelectedCampaignId(id as Id<'campaigns'>)}
+                    >
+                      <SelectTrigger className="h-auto p-0 border-0 shadow-none bg-transparent hover:bg-transparent focus:ring-0 text-xl font-bold text-foreground gap-2 cursor-pointer w-auto inline-flex items-center">
+                        <SelectValue placeholder="Select campaign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {campaigns.map((c) => (
+                          <SelectItem key={c._id} value={c._id} className="text-sm font-medium">
+                            {c.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <h1 className="text-xl font-bold text-foreground truncate">
+                      {activeCampaign?.title ?? 'Campaign Workspace'}
+                    </h1>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-4 shrink-0">
                   {/* Compact inline budget metrics */}
                   <div className="text-right">
-                    <span className="text-[10px] text-muted-foreground uppercase block font-medium">Committed Spend</span>
+                    <span className="text-[10px] text-muted-foreground uppercase block font-medium">
+                      Committed Spend
+                    </span>
                     <span className="text-xs font-semibold text-foreground">
                       ${(metrics?.totalCommittedSpend ?? 0).toLocaleString()} / ${(activeCampaign?.budget ?? 2000).toLocaleString()}
                     </span>
                   </div>
-
-                  <Separator orientation="vertical" className="h-6" />
-
-                  {/* Autonomy Mode Toggle */}
-                  <button
-                    type="button"
-                    onClick={handleToggleAutonomyMode}
-                    className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition-colors ${
-                      activeCampaign?.autonomyMode === 'full_autonomy'
-                        ? 'border-border bg-secondary text-foreground'
-                        : 'border-border/80 bg-background text-foreground hover:bg-secondary'
-                    }`}
-                    title="Toggle Autonomy Mode"
-                  >
-                    {activeCampaign?.autonomyMode === 'full_autonomy' ? 'Full Autonomy' : 'Human-in-the-Loop'}
-                  </button>
 
                   <Button
                     size="sm"

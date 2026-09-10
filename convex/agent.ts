@@ -21,6 +21,7 @@ import { analyzeAndDraftNegotiation } from "./integrations/openai";
 export interface ThreadWithRelations extends Doc<"threads"> {
   creator: Doc<"creators"> | null;
   campaign: Doc<"campaigns"> | null;
+  messages?: Doc<"messages">[];
 }
 
 export function getLanguageModel(
@@ -323,3 +324,145 @@ Analyze the incoming message.
     };
   },
 });
+
+export const draftEmailWithAgent = action({
+  args: {
+    threadId: v.id("threads"),
+    instruction: v.string(),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ subject: string; body: string }> => {
+    const thread: ThreadWithRelations | null = await ctx.runQuery(api.threads.get, {
+      id: args.threadId,
+    });
+    if (!thread || !thread.creator || !thread.campaign) {
+      throw new Error("Thread, creator, or campaign not found");
+    }
+
+    const creatorName = thread.creator.name;
+    const campaignTitle = thread.campaign.title;
+    const budget = thread.campaign.budget;
+    const deliverables = thread.campaign.deliverableRequirements;
+    const currentRate = thread.requestedRate ?? thread.proposedFee;
+    const messages = thread.messages || [];
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (apiKey) {
+      try {
+        const conversationContext = messages
+          .slice(-6)
+          .map(
+            (m: Doc<"messages">) =>
+              `[${m.sender === "creator" ? creatorName : "Parley Team"}]: ${m.rawBody}`
+          )
+          .join("\n\n");
+
+        const prompt = `You are Parley, an AI partnership manager helping the brand team communicate with creator "${creatorName}".
+Campaign: "${campaignTitle}"
+Budget Cap: $${budget} USD
+Current Proposed/Requested Fee: $${currentRate} USD
+Deliverable Requirements: "${deliverables}"
+
+Recent Email Thread History:
+${conversationContext || "No previous messages yet in this thread."}
+
+User's Command / Instruction for this Email:
+"""${args.instruction}"""
+
+Draft a professional, engaging, and clear email response that executes the user's instruction precisely.
+Return a JSON object with:
+1. "subject": the subject line (e.g. "Re: Partnership Collaboration - ${campaignTitle}")
+2. "body": the email message text. Write directly to ${creatorName}. Sign off as "Parley Partnerships Team". Do NOT include meta commentary.`;
+
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+            temperature: 0.3,
+          }),
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as {
+            choices: Array<{ message: { content: string } }>;
+          };
+          const raw = data.choices[0]?.message?.content;
+          if (raw) {
+            const parsed = JSON.parse(raw) as { subject?: string; body?: string };
+            if (parsed.body) {
+              return {
+                subject: parsed.subject || `Re: Partnership Collaboration - ${campaignTitle}`,
+                body: parsed.body,
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to generate draft with OpenAI, falling back:", err);
+      }
+    }
+
+    // Contextual intelligent fallback
+    const lowerInstr = args.instruction.toLowerCase();
+    const subject = `Re: Partnership Collaboration - ${campaignTitle}`;
+
+    if (
+      lowerInstr.includes("counter") ||
+      lowerInstr.includes("budget") ||
+      lowerInstr.includes("rate")
+    ) {
+      return {
+        subject,
+        body: `Hi ${creatorName},\n\nThank you for getting back to us! While your quote is slightly above our cap for "${campaignTitle}", we are very excited about your audience alignment.\n\nCould we explore anchoring closer to $${budget.toLocaleString()} for ${deliverables}, or perhaps adjusting the scope slightly? Let us know what might work best for your team.\n\nBest regards,\nParley Partnerships Team`,
+      };
+    }
+
+    if (
+      lowerInstr.includes("accept") ||
+      lowerInstr.includes("confirm") ||
+      lowerInstr.includes("contract")
+    ) {
+      return {
+        subject,
+        body: `Hi ${creatorName},\n\nFantastic news! We are thrilled to confirm our collaboration on "${campaignTitle}" at $${currentRate.toLocaleString()} for ${deliverables}.\n\nPlease review our onboarding agreement here: https://parley.app/onboard?creator=${encodeURIComponent(creatorName)}\n\nLooking forward to an incredible campaign together!\n\nBest regards,\nParley Partnerships Team`,
+      };
+    }
+
+    if (
+      lowerInstr.includes("media kit") ||
+      lowerInstr.includes("stats") ||
+      lowerInstr.includes("metrics") ||
+      lowerInstr.includes("demographic")
+    ) {
+      return {
+        subject,
+        body: `Hi ${creatorName},\n\nHope you're having a productive week! Before finalizing our flight schedule for "${campaignTitle}", could you share your most recent media kit and audience demographic metrics (geographic breakdown and age distribution)?\n\nThanks so much,\nParley Partnerships Team`,
+      };
+    }
+
+    if (
+      lowerInstr.includes("decline") ||
+      lowerInstr.includes("pass") ||
+      lowerInstr.includes("walk away")
+    ) {
+      return {
+        subject,
+        body: `Hi ${creatorName},\n\nThank you for considering our partnership proposal for "${campaignTitle}". Unfortunately, we are unable to accommodate these terms at this time and will need to pass on this cycle.\n\nWe appreciate your time and hope to collaborate on future opportunities!\n\nBest regards,\nParley Partnerships Team`,
+      };
+    }
+
+    return {
+      subject,
+      body: `Hi ${creatorName},\n\nHope you're having a wonderful week! Following up on our collaboration for "${campaignTitle}":\n\n${args.instruction}\n\nPlease let us know your thoughts when you have a moment.\n\nBest regards,\nParley Partnerships Team`,
+    };
+  },
+});
+
